@@ -1,6 +1,6 @@
 A deploy of this code is available at https://alec-mitnik-color-bloom.netlify.app/
 
-An algorithmically-generated bloom of color will initiate on load at the center of the screen, and will continue until it fills up the canvas, which is initialized to 1920x1080.  The starting hue and the hue variation rate are randomized on load.  The saturation and value/lightness settings are configurable but fixed to what I feel are their optimized values.
+An algorithmically-generated bloom of color will initiate on load at the center of the screen, and will continue until it fills up the canvas, which is initialized to 1920x1080.  The starting hue and the hue variation rate are randomized on load.  The saturation and value/lightness settings are configurable but fixed to what I feel are their optimal values.
 
 You can interact with the loaded page.  Clicking while a bloom is progressing will stop it.  Clicking without a bloom progressing will start a new bloom at the mouse position, using the same hue settings if left-clicking and new randomized ones if right-clicking.
 
