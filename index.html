@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Color Bloom</title>
+
+<style>
+*, *::before, *::after {
+	box-sizing: border-box;
+	flex: 0 0 auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+body, html {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+body {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background: #000000;
+	overflow: hidden;
+}
+</style>
+
+<script>
+const CANVAS_WIDTH = 1920;
+const CANVAS_HEIGHT = 1080;
+const DELAY_THRESHOLD = 1000;
+const STARTING_SATURATION = 1;
+const SATURATION_MUTATION = 0;
+
+let useHSL = true;
+// Only applies if using HSL
+const MIN_LIGHTNESS = 0.0;
+const MAX_LIGHTNESS = 0.6;
+
+const VALUE_MUTATION = useHSL ? 0.03 : 0.05;
+const STARTING_VALUE = useHSL ?
+		Math.random() * (MAX_LIGHTNESS - MIN_LIGHTNESS) + MIN_LIGHTNESS
+		: Math.random();
+
+let pixelGrid = Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT}));
+let branches = [];
+let growthActive = false;
+let interactive = true;
+
+function generateHueMutation() {
+	return Math.random() * 10;
+}
+
+let HUE_MUTATION = generateHueMutation();
+
+function generateStartingHue() {
+	return Math.random() * 360;
+}
+
+let STARTING_HUE = generateStartingHue();
+
+// Input: h in [0, 360] and s,v in [0, 1] - output: r,g,b in [0, 255]
+function hsv2rgb(h, s, v)
+{
+	const f = (n, k = (n + h / 60) % 6) => v - v * s * Math.max( Math.min(k, 4 - k , 1), 0);
+	return [f(5) * 255, f(3) * 255, f(1) * 255];
+}
+
+function randEl(arr) {
+	return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function removeEl(arr, el) {
+	return arr.splice(arr.indexOf(el), 1)[0];
+}
+
+function pluckRandEl(arr) {
+	return removeEl(arr, randEl(arr));
+}
+
+function step() {
+	return new Promise(resolve => {
+		setTimeout(resolve);
+	});
+}
+
+function getColorString(h, s, v) {
+	let colorString;
+	
+	if (useHSL) {
+		colorString =  `hsl(${h}, ${
+			Math.floor(s * 101)
+		}%, ${
+			Math.floor(v * 101)
+		}%)`;
+	} else {
+		const [r, g, b] = hsv2rgb(h, s, v);
+		colorString =  `rgb(${r}, ${g}, ${b})`;
+	}
+	
+	return colorString;
+}
+
+function drawPixel(pixel) {
+	let canvas = document.getElementById("theCanvas");
+	let context = canvas.getContext("2d");
+	context.fillStyle = getColorString(pixel.h, pixel.s, pixel.v);
+    context.fillRect(pixel.x, pixel.y, 1, 1);
+}
+
+function addPixel(x, y, h, s, v) {
+	const pixel = {x, y, h, s, v};
+	pixelGrid[x][y] = pixel;
+	branches.push(pixel);
+	drawPixel(pixel);
+}
+
+function mutateHue(h) {
+	let actualMutation = HUE_MUTATION;
+	if (h >= 23 && h <= 27) {
+		// Not enough orange
+		actualMutation /= 2;
+	} else if (h >= 100 && h <= 120) {
+		// Too much green
+		actualMutation *= 2;
+	} else if (h >= 192 && h <= 198) {
+		// Not enough light blue
+		actualMutation /= 2;
+	} else if (h >= 265 && h <= 275) {
+		// Not enough purple
+		if (h >= 269 && h <= 271) {
+			actualMutation /= 4;
+		} else {
+			actualMutation /= 2;
+		}
+	}
+	
+	// return (h + actualMutation + 360) % 360;
+	return (Math.random() * actualMutation * 2 - actualMutation + h + 360) % 360;
+}
+
+function mutateSaturation(s) {
+	return Math.max(Math.min(
+			(Math.random() * (SATURATION_MUTATION * 2)) - SATURATION_MUTATION + s,
+	1), 0);
+}
+
+function mutateValue(v) {
+	const newValue = (Math.random() * (VALUE_MUTATION * 2)) - VALUE_MUTATION + v;
+	
+	if (useHSL) {
+		return Math.max(Math.min(newValue, MAX_LIGHTNESS), MIN_LIGHTNESS)
+	} else {
+		return Math.max(Math.min(newValue, 1), 0);
+	}
+}
+
+function growBranch() {
+	randBranch = randEl(branches);
+	
+	const neighbors = [
+		{x: randBranch.x - 1, y: randBranch.y},
+		{x: randBranch.x + 1, y: randBranch.y},
+		{x: randBranch.x, y: randBranch.y - 1},
+		{x: randBranch.x, y: randBranch.y + 1},
+	];
+	
+	while (neighbors.length) {
+		const neighbor = pluckRandEl(neighbors);
+		if (neighbor.x >= 0 && neighbor.x < CANVAS_WIDTH
+				&& neighbor.y >= 0 && neighbor.y < CANVAS_HEIGHT
+				&& !pixelGrid[neighbor.x][neighbor.y]) {
+			addPixel(
+				neighbor.x,
+				neighbor.y,
+				mutateHue(randBranch.h),
+				mutateSaturation(randBranch.s),
+				mutateValue(randBranch.v)
+			);
+		}
+	};
+	
+	if (!neighbors.length) {
+		removeEl(branches, randBranch);
+	}
+}
+
+async function grow(x, y) {
+	addRandomPixel(x, y);
+	
+	let growths = 1;
+
+	if (!growthActive) {
+		growthActive = true;
+		while (branches.length) {
+			growBranch();
+			
+			if (growths % DELAY_THRESHOLD === 0) {
+				await step();
+			}
+			
+			growths++;
+		}
+		growthActive = false;
+	}
+}
+
+function addRandomPixel(x, y) {
+	addPixel(x, y, STARTING_HUE, STARTING_SATURATION, STARTING_VALUE);
+}
+
+function handleClick(clickX, clickY, useNewValues) {
+	let canvas = document.getElementById("theCanvas");
+
+	let {x, y} = canvas.getBoundingClientRect();
+	x = Math.round(clickX - x);
+	y = Math.round(clickY - y);
+	
+	if (x >= 0 && x < CANVAS_WIDTH
+			&& y >= 0 && y < CANVAS_HEIGHT) {
+		pixelGrid = Array.from({length: CANVAS_WIDTH},
+				() => Array.from({length: CANVAS_HEIGHT}));
+		branches = [];
+		
+		if (!growthActive) {
+			if (useNewValues) {
+				HUE_MUTATION = generateHueMutation();
+				STARTING_HUE = generateStartingHue();
+			}
+			
+			setTimeout(() => grow(x, y));
+		}
+		
+		growthActive = false;
+	}
+}
+
+function onCanvasClick(event) {
+	// event.button is 0 for left click, but this event doesn't fire in Chrome for clicks
+	if (!interactive || event.button !== 0) {
+		return;
+	}
+	
+	handleClick(event.x, event.y);
+}
+
+function onContextMenu(event) {
+	event.preventDefault();
+	handleClick(event.x, event.y, true);
+}
+
+function init() {
+	let canvas = document.getElementById("theCanvas");
+	canvas.width = CANVAS_WIDTH;
+	canvas.height = CANVAS_HEIGHT;
+	
+	grow(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+}
+</script>
+</head>
+
+<body onload="init()">
+<canvas id="theCanvas" onclick="onCanvasClick(event)" oncontextmenu="onContextMenu(event)"></canvas>
+</body>
+</html>

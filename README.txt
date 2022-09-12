@@ -1,0 +1,5 @@
+An algorithmically-generated bloom of color will initiate on load at the center of the screen, and will continue until it fills up the canvas, which is initialized to 1920x1080.  The starting hue and the hue variation rate are randomized on load.  The saturation and value/lightness settings are configurable but fixed to what I feel are their optimized values.
+
+You can interact with the loaded page.  Clicking while a bloom is progressing will stop it.  Clicking without a bloom progressing will start a new bloom at the mouse position, using the same hue settings if left-clicking and new randomized ones if right-clicking.
+
+You can enter fullscreen mode in your browser with F11 (on Windows at least, not sure about Mac) and then take a screenshot in order to save the generated artwork.  Works best if your monitor is set to the same resolution as the canvas.  You could also just download the HTML file yourself and change the canvas size or whatever other settings you like and run it locally.
