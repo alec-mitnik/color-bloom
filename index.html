@@ -17,6 +17,7 @@ body, html {
 	margin: 0;
 	padding: 0;
 	height: 100%;
+	overflow: hidden;
 }
 
 body {
@@ -24,7 +25,6 @@ body {
 	justify-content: center;
 	align-items: center;
 	background: #000000;
-	overflow: hidden;
 }
 </style>
 
@@ -188,6 +188,10 @@ function growBranch() {
 	}
 }
 
+function addRandomPixel(x, y) {
+	addPixel(x, y, STARTING_HUE, STARTING_SATURATION, STARTING_VALUE);
+}
+
 async function grow(x, y) {
 	addRandomPixel(x, y);
 	
@@ -206,10 +210,6 @@ async function grow(x, y) {
 		}
 		growthActive = false;
 	}
-}
-
-function addRandomPixel(x, y) {
-	addPixel(x, y, STARTING_HUE, STARTING_SATURATION, STARTING_VALUE);
 }
 
 function handleClick(clickX, clickY, useNewValues) {
