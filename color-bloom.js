@@ -468,7 +468,7 @@ export function isErasing(spawningElement = null) {
  * Stops any ongoing blooming for the general canvas or the one for the spawning element if specified
  * @param {HTMLElement} spawningElement
  */
-export function stopBlooming(spawningElement = null) {
+export function stopBlooming(spawningElement = document.body) {
   if (!blooms.has(spawningElement)) {
     return false;
   }
@@ -488,7 +488,7 @@ export function stopBlooming(spawningElement = null) {
  * Stops any ongoing erasing for the general canvas or the one for the spawning element if specified
  * @param {HTMLElement} spawningElement
  */
-export function stopErasing(spawningElement = null) {
+export function stopErasing(spawningElement = document.body) {
   if (!blooms.has(spawningElement)) {
     return false;
   }
@@ -506,13 +506,13 @@ export function stopErasing(spawningElement = null) {
 
 /**
  * Erases from the canvas in the same way as bloomColor colors the canvas
- * @param {
+ * @param {{
  *  x?: number,
  *  y?: number,
  *  spawningElement?: HTMLElement,
  *  maxRadius?: number
  *  speed?: number
- * } options Config options
+ * }} options Config options
  * - x: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
  * If you want to erase at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x`
  * if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
@@ -566,15 +566,18 @@ export function bloomErase({
 
 /**
  * Downloads the corresponding canvas as an image file
- * @param {HTMLElement} spawningElement
+ * @param {HTMLElement} spawningElement - The HTML element whose corresponding canvas to download as an image.
+ * Defaults to `document.body`.
+ * @param {string} fileName - The name to give the image file, without the extension
+ * @param {string} fileType - The file type to use for the created image, also serving as the extension
  */
-export function saveAsImage(spawningElement = null) {
+export function saveAsImage(spawningElement = document.body, fileName = 'color-bloom', fileType = 'webp') {
   const canvas = blooms.get(spawningElement)?.canvas;
 
   if (canvas) {
     const link = document.createElement('a');
-    link.download = 'color-bloom.webp';
-    link.href = canvas.toDataURL('image/webp');
+    link.download = `${fileName}.${fileType}`;
+    link.href = canvas.toDataURL(`image/${fileType}`);
     link.click();
     link.remove();
   }
