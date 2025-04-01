@@ -545,7 +545,8 @@ export function bloomErase({
     if (confineToSpawningElement) {
       bloomX = width / 2;
     } else {
-      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x) + width / 2;
+      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+          + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
 
@@ -553,7 +554,8 @@ export function bloomErase({
     if (confineToSpawningElement) {
       bloomY = height / 2;
     } else {
-      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y) + height / 2;
+      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+          + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
 
@@ -806,7 +808,8 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       bloomX = width / 2;
     } else {
-      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x) + width / 2;
+      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+          + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
 
@@ -814,7 +817,8 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       imageX = width / 2;
     } else {
-      imageX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x) + width / 2;
+      imageX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+          + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
 
@@ -822,7 +826,8 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       bloomY = height / 2;
     } else {
-      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y) + height / 2;
+      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+          + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
 
@@ -830,7 +835,8 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       imageY = height / 2;
     } else {
-      imageY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y) + height / 2;
+      imageY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+          + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
 
@@ -1026,7 +1032,8 @@ export function bloomColor({
     if (confineToSpawningElement) {
       bloomX = width / 2;
     } else {
-      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x) + width / 2;
+      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+          + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
 
@@ -1034,7 +1041,8 @@ export function bloomColor({
     if (confineToSpawningElement) {
       bloomY = height / 2;
     } else {
-      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y) + height / 2;
+      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+          + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
 
