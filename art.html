@@ -31,6 +31,7 @@ let growthActive = false;
 let interactive = true;
 let isDrawing = false;
 let previousBrushstroke = null;
+const touches = new Map();
 
 function generateHueMutation() {
   return Math.random() * 10;
@@ -551,6 +552,21 @@ function onCanvasMouseMove(event) {
 }
 
 function onCanvasTouchMove(event) {
+  event.preventDefault();
+
+  let netMovementX = 0, netMovementY = 0;
+
+  for (const touch of event.changedTouches) {
+    const oldTouch = touches.get(touch.identifier);
+
+    if (oldTouch) {
+      netMovementX += touch.clientX - oldTouch.clientX;
+      netMovementY += touch.clientY - oldTouch.clientY;
+    }
+
+    touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
+  }
+
   if (!interactive) {
     return;
   }
@@ -565,8 +581,8 @@ function onCanvasTouchMove(event) {
   } else if (event.touches.length !== 1 && document.getElementById("canvasWrapper").classList.contains("positioning")) {
     const offsetLimitX = window.innerWidth * 0.6;
     const offsetLimitY = window.innerHeight * 0.6;
-    setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + event.movementX, -offsetLimitX), offsetLimitX)}px`);
-    setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + event.movementY, -offsetLimitY), offsetLimitY)}px`);
+    setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + netMovementX, -offsetLimitX), offsetLimitX)}px`);
+    setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + netMovementY, -offsetLimitY), offsetLimitY)}px`);
   }
 }
 
@@ -627,6 +643,10 @@ function onCanvasTouchStart(event) {
     return;
   }
 
+  for (const touch of event.changedTouches) {
+    touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
+  }
+
   if (event.touches.length === 1) {
     const toolbar = document.getElementById("toolbar");
 
@@ -650,6 +670,10 @@ function onCanvasTouchStart(event) {
 }
 
 function onCanvasTouchEnd(event) {
+  for (const touch of event.changedTouches) {
+    touches.delete(touch.identifier);
+  }
+
   if (event.touches.length < 2) {
     document.getElementById("canvasWrapper").classList.remove("positioning");
 
@@ -1071,6 +1095,7 @@ canvas {
     ontouchstart="onCanvasTouchStart(event)"
     onmouseup="onCanvasMouseUp(event)"
     ontouchend="onCanvasTouchEnd(event)"
+    ontouchcancel="onCanvasTouchEnd(event)"
     onmouseenter="onCanvasMouseEnter(event)"
     onmouseleave="onCanvasMouseLeave(event)"
     onmousemove="onCanvasMouseMove(event)"
