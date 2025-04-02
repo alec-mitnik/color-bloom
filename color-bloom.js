@@ -757,11 +757,8 @@ export async function bloomImage({
 
       Object.assign(canvasWrapper.style, {
         position: confineToSpawningElement ? "absolute" : "fixed",
-        top: "0",
-        left: "0",
+        inset: 0,
         zIndex: -1,
-        width: confineToSpawningElement ? "100%" : "100vw",
-        height: confineToSpawningElement ? "100%" : "100dvh",
         overflow: "hidden",
         display: "flex",
         justifyContent: "center",
@@ -977,11 +974,8 @@ export function bloomColor({
 
       Object.assign(canvasWrapper.style, {
         position: confineToSpawningElement ? "absolute" : "fixed",
-        top: "0",
-        left: "0",
+        inset: 0,
         zIndex: -1,
-        width: confineToSpawningElement ? "100%" : "100vw",
-        height: confineToSpawningElement ? "100%" : "100dvh",
         overflow: "hidden",
         display: "flex",
         justifyContent: "center",
