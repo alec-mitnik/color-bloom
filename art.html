@@ -510,9 +510,9 @@ function handleClick(clickX, clickY, useNewValues) {
         setTimeout(() => grow(x, y, true, getPixelGrid()[x][y].v === 0));
       }
     }
-
-    stopGrowth();
   }
+
+  stopGrowth();
 }
 
 function onCanvasClick(event) {
