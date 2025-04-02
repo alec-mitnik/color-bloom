@@ -401,7 +401,7 @@ async function grow(spawningElement, x, y, h, s, l, hueVariance, saturationVaria
  */
 export function removeCanvas(spawningElement = document.body) {
   if (blooms.has(spawningElement)) {
-    const canvas = blooms.get(spawningElement).canvas;
+    const canvas = getCanvas(spawningElement);
 
     if (canvas) {
       if (spawningElement.contains(canvas)) {
@@ -417,7 +417,16 @@ export function removeCanvas(spawningElement = document.body) {
 }
 
 /**
- * Clears the general canvas or the one for the spawning element if specified
+ * Gets a reference to the corresponding canvas for the spawning element
+ * @param {HTMLElement} spawningElement
+ * @returns
+ */
+export function getCanvas(spawningElement = document.body) {
+  return blooms.get(spawningElement)?.canvas;
+}
+
+/**
+ * Clears the canvas corresponding to the spawning element
  * @param {HTMLElement} spawningElement
  */
 export function clearCanvas(spawningElement = document.body) {
@@ -435,7 +444,7 @@ export function clearCanvas(spawningElement = document.body) {
 }
 
 /**
- * Checks if the general canvas or the one for the spawning element is currently blooming
+ * Checks if the canvas corresponding to the spawning element is currently blooming
  * @param {HTMLElement} spawningElement
  * @returns boolean
  */
@@ -450,7 +459,7 @@ export function isBlooming(spawningElement = document.body) {
 }
 
 /**
- * Checks if the general canvas or the one for the spawning element is currently erasing
+ * Checks if the canvas corresponding to the spawning element is currently erasing
  * @param {HTMLElement} spawningElement
  * @returns boolean
  */
@@ -465,7 +474,7 @@ export function isErasing(spawningElement = document.body) {
 }
 
 /**
- * Stops any ongoing blooming for the general canvas or the one for the spawning element if specified
+ * Stops any ongoing blooming for the canvas corresponding to the spawning element
  * @param {HTMLElement} spawningElement
  */
 export function stopBlooming(spawningElement = document.body) {
@@ -485,7 +494,7 @@ export function stopBlooming(spawningElement = document.body) {
 }
 
 /**
- * Stops any ongoing erasing for the general canvas or the one for the spawning element if specified
+ * Stops any ongoing erasing for the canvas corresponding to the spawning element
  * @param {HTMLElement} spawningElement
  */
 export function stopErasing(spawningElement = document.body) {
@@ -650,7 +659,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
  * @param {{
  *  x?: number,
  *  y?: number,
- *  zIndex?: number,
+*  overridingStyles?: CSSStyleDeclaration,
  *  imageX?: number,
  *  imageY?: number,
  *  widthOverride?: number,
@@ -669,8 +678,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
  * - y: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
  * If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y`
  * if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * - zIndex: The z-index of the canvas.  Defaults to -1.  Changing this will only really be relevant
- * when confineToSpawningElement is true.
+ * - overridingStyles: An object of overriding styles to apply to the canvas wrapper, such as zIndex.
  * - imageX: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
  * If you want the image at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x`
  * if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
@@ -694,7 +702,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
 export async function bloomImage({
   x: bloomX = NaN,
   y: bloomY = NaN,
-  zIndex = -1,
+  overridingStyles = {},
   imageX = NaN,
   imageY = NaN,
   widthOverride = NaN,
@@ -722,7 +730,7 @@ export async function bloomImage({
     heightOverride = heightOverride || height;
   }
 
-  let canvas = blooms.get(spawningElement).canvas;
+  let canvas = getCanvas(spawningElement);
 
   if (!canvas) {
     canvas = document.createElement("canvas");
@@ -751,7 +759,7 @@ export async function bloomImage({
         position: confineToSpawningElement ? "absolute" : "fixed",
         top: "0",
         left: "0",
-        zIndex,
+        zIndex: -1,
         width: confineToSpawningElement ? "100%" : "100vw",
         height: confineToSpawningElement ? "100%" : "100dvh",
         overflow: "hidden",
@@ -759,6 +767,7 @@ export async function bloomImage({
         justifyContent: "center",
         alignItems: "center",
         pointerEvents: "none",
+        ...overridingStyles,
       });
 
       if (confineToSpawningElement) {
@@ -866,7 +875,7 @@ export async function bloomImage({
  * @param {{
  *  x?: number,
  *  y?: number,
- *  zIndex?: number,
+ *  overridingStyles?: CSSStyleDeclaration,
  *  spawningElement?: HTMLElement,
  *  color?: {h?: number, s?: number, l?: number},
  *  hueVariance?: number,
@@ -884,8 +893,7 @@ export async function bloomImage({
  * - y: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
  * If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y`
  * if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * - zIndex: The z-index of the canvas.  Defaults to -1.  Changing this will only really be relevant
- * when confineToSpawningElement is true.
+ * - overridingStyles: An object of overriding styles to apply to the canvas wrapper, such as zIndex.
  * - spawningElement: The HTML element to spawn the bloom from.  Defaults to `document.body`.
  * - color: The starting color in HSL color space.  Defaults to a random hue, full saturation, and mid lightness.
  * - hueVariance: The amount to mutate the hue by, as a value from 0 to 1.  Defaults to a random value, skewing low.
@@ -902,7 +910,7 @@ export async function bloomImage({
 export function bloomColor({
   x: bloomX = NaN,
   y: bloomY = NaN,
-  zIndex = -1,
+  overridingStyles = {},
   spawningElement = document.body,
   color = {},
   hueVariance = generateHueMutation(),
@@ -942,7 +950,7 @@ export function bloomColor({
     blooms.set(spawningElement, {branches: []});
   }
 
-  let canvas = blooms.get(spawningElement).canvas;
+  let canvas = getCanvas(spawningElement);
 
   if (!canvas) {
     canvas = document.createElement("canvas");
@@ -971,7 +979,7 @@ export function bloomColor({
         position: confineToSpawningElement ? "absolute" : "fixed",
         top: "0",
         left: "0",
-        zIndex,
+        zIndex: -1,
         width: confineToSpawningElement ? "100%" : "100vw",
         height: confineToSpawningElement ? "100%" : "100dvh",
         overflow: "hidden",
@@ -979,6 +987,7 @@ export function bloomColor({
         justifyContent: "center",
         alignItems: "center",
         pointerEvents: "none",
+        ...overridingStyles,
       });
 
       if (confineToSpawningElement) {
