@@ -823,6 +823,7 @@ body, #canvasWrapper {
 }
 
 #canvasWrapper {
+  touch-action: none;
   min-width: 100%;
   min-height: 100%;
 
@@ -892,6 +893,8 @@ canvas {
   }
 
   label:not(:has(input[type="range"])) {
+    cursor: pointer;
+
     &:has(:checked:not([type="checkbox"])) {
       background-color: black;
       border-color: white;
@@ -902,7 +905,7 @@ canvas {
     }
 
     @media (hover: hover) {
-      &:has(:hover:not(:checked)) {
+      &:hover {
         background-color: black;
       }
     }
@@ -910,7 +913,6 @@ canvas {
     input {
       appearance: none;
       background: transparent;
-      visibility: hidden;
       margin: 0;
       padding: 0;
       border: none;
@@ -919,7 +921,6 @@ canvas {
       left: 0;
       width: 100%;
       height: 100%;
-      cursor: pointer;
     }
   }
 
@@ -942,6 +943,9 @@ canvas {
 
   button {
     appearance: none;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
 
     @media (hover: hover) {
       &:hover:not(:disabled) {
@@ -949,7 +953,7 @@ canvas {
       }
     }
 
-    :disabled {
+    &:disabled {
       opacity: 0.5;
       cursor: default;
     }
@@ -988,16 +992,12 @@ canvas {
         </div>
 
         <div class="collapsible">
-          |
-
           <label>
             Canvas Scale
             <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
                 oninput="onCanvasScaleValueChange(event.currentTarget.value, 'canvasScaleValue')" />
             <span id="canvasScaleValue">50%</span>
           </label>
-
-          |
         </div>
 
         <div>
@@ -1016,24 +1016,26 @@ canvas {
 
     <div id="brush-menu" class="submenu collapsible">
       <label>
-        Brush Radius
+        Brush Size
         <input type="range" name="brushSize" min="3" max="25" value="7" step="2"
             oninput="onRangeValueChange(event, 'brushSizeValue', false)" />
         <span id="brushSizeValue">7</span>
       </label>
 
-      <button type="button" aria-label="Heart Rose Template" onclick="loadTemplate('heart-rose.png')">🌹</button>
+      <div>
+        <button type="button" aria-label="Heart Rose Template" onclick="loadTemplate('heart-rose.png')">🌹</button>
 
-      <button type="button" aria-label="Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">🎄</button>
+        <button type="button" aria-label="Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">🎄</button>
 
-      <button type="button" aria-label="Gears Template" onclick="loadTemplate('gears.jpg')">⚙️</button>
+        <button type="button" aria-label="Gears Template" onclick="loadTemplate('gears.jpg')">⚙️</button>
 
-      <button type="button" aria-label="Palm Tree Template" onclick="loadTemplate('palm-tree.png')">🌴</button>
+        <button type="button" aria-label="Palm Tree Template" onclick="loadTemplate('palm-tree.png')">🌴</button>
+      </div>
     </div>
 
     <div id="fill-menu" class="submenu collapsible hidden">
       <label aria-label="Color for Fill">
-        🎨
+        <span style="visibility: hidden";>🎨</span>
         <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
       </label>
 
