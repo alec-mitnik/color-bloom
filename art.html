@@ -809,6 +809,13 @@ function init() {
   setCssVar('--canvas-width', `${CANVAS_WIDTH}px`);
   setCssVar('--canvas-height', `${CANVAS_HEIGHT}px`);
   setCssVar('--canvas-scale', `${getToolbarData().canvasScale / 100}`);
+
+  window.addEventListener('beforeunload', (event) => {
+    if (historyIndex < pixelGridHistory.length - 1) {
+      // Triggers a confirmation dialog
+      event.preventDefault();
+    }
+  });
 }
 </script>
 
