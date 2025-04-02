@@ -565,18 +565,19 @@ export function bloomErase({
 }
 
 /**
- * Downloads the corresponding canvas as an image file
+ * Downloads an image file of the corresponding canvas, if any.
  * @param {HTMLElement} spawningElement - The HTML element whose corresponding canvas to download as an image.
  * Defaults to `document.body`.
- * @param {string} fileName - The name to give the image file, without the extension
- * @param {string} fileType - The file type to use for the created image, also serving as the extension
+ * @param {string} fileName - The name to give the image file, without the extension.  Defaults to `color-bloom`.
+ * @param {string} fileType - The file type to use for the created image, also serving as the extension.
+ * Defaults to `webp`, though this may get overridden by the browser.
  */
 export function downloadAsImage(spawningElement = document.body, fileName = 'color-bloom', fileType = 'webp') {
   const canvas = blooms.get(spawningElement)?.canvas;
 
   if (canvas) {
     const link = document.createElement('a');
-    link.download = `${fileName}.${fileType}`;
+    link.download = fileName;
     link.href = canvas.toDataURL(`image/${fileType}`);
     link.click();
     link.remove();
