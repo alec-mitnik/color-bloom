@@ -376,6 +376,14 @@ function storeHistory() {
   updateHistoryButtons();
 }
 
+function downloadAsImage() {
+  const link = document.createElement('a');
+  link.download = 'color-bloom-wallpaper';
+  link.href = getCanvas().toDataURL(`image/webp`);
+  link.click();
+  link.remove();
+}
+
 function undo() {
   if (pixelGridHistory.length - 1 > historyIndex) {
     stopGrowth();
@@ -1029,6 +1037,8 @@ canvas {
                 oninput="onCanvasScaleValueChange(event.currentTarget.value, 'canvasScaleValue')" />
             <span id="canvasScaleValue">50%</span>
           </label>
+
+          <button id="downloadAsImageButton" type="button" aria-label="Download as Image" onclick="downloadAsImage()">📥</button>
         </div>
 
         <div>
