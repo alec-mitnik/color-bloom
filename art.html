@@ -520,6 +520,12 @@ function onCanvasClick(event) {
     return;
   }
 
+  const toolbar = document.getElementById("toolbar");
+
+  if (toolbar.classList.contains("hidden")) {
+    return;
+  }
+
   handleClick(event.x, event.y);
 }
 
@@ -611,7 +617,7 @@ function onCanvasMouseUp(event) {
   setCssVar('--toolbar-pointer-events', 'all');
 
   const toolbar = document.getElementById("toolbar");
-  toolbar.classList.remove("hidden");
+  setTimeout(() => toolbar.classList.remove("hidden"), 50);
 }
 
 function onCanvasTouchStart(event) {
@@ -653,7 +659,7 @@ function onCanvasTouchEnd(event) {
       setCssVar('--toolbar-pointer-events', 'all');
 
       const toolbar = document.getElementById("toolbar");
-      toolbar.classList.remove("hidden");
+      setTimeout(() => toolbar.classList.remove("hidden"), 50);
     }
   }
 }
