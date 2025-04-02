@@ -399,7 +399,7 @@ async function grow(spawningElement, x, y, h, s, l, hueVariance, saturationVaria
  * preventing any potential retriggers from screen size changes
  * @param {HTMLElement} spawningElement
  */
-export function removeCanvas(spawningElement = null) {
+export function removeCanvas(spawningElement = document.body) {
   if (blooms.has(spawningElement)) {
     const canvas = blooms.get(spawningElement).canvas;
 
@@ -420,7 +420,7 @@ export function removeCanvas(spawningElement = null) {
  * Clears the general canvas or the one for the spawning element if specified
  * @param {HTMLElement} spawningElement
  */
-export function clearCanvas(spawningElement = null) {
+export function clearCanvas(spawningElement = document.body) {
   stopBlooming(spawningElement);
   stopErasing(spawningElement);
 
@@ -439,7 +439,7 @@ export function clearCanvas(spawningElement = null) {
  * @param {HTMLElement} spawningElement
  * @returns boolean
  */
-export function isBlooming(spawningElement = null) {
+export function isBlooming(spawningElement = document.body) {
   if (!blooms.has(spawningElement)) {
     return false;
   }
@@ -454,7 +454,7 @@ export function isBlooming(spawningElement = null) {
  * @param {HTMLElement} spawningElement
  * @returns boolean
  */
-export function isErasing(spawningElement = null) {
+export function isErasing(spawningElement = document.body) {
   if (!blooms.has(spawningElement)) {
     return false;
   }
@@ -571,7 +571,7 @@ export function bloomErase({
  * @param {string} fileName - The name to give the image file, without the extension
  * @param {string} fileType - The file type to use for the created image, also serving as the extension
  */
-export function saveAsImage(spawningElement = document.body, fileName = 'color-bloom', fileType = 'webp') {
+export function downloadAsImage(spawningElement = document.body, fileName = 'color-bloom', fileType = 'webp') {
   const canvas = blooms.get(spawningElement)?.canvas;
 
   if (canvas) {
@@ -640,6 +640,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
     }
   }
 
+  canvas.remove();
   return pixelGrid;
 }
 
