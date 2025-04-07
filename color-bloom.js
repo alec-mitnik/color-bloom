@@ -2,7 +2,7 @@ const CANVAS_WRAPPER_ID = "color-bloom-canvas-wrapper";
 const blooms = new Map();
 
 function generateHueMutation() {
-  return Math.random() * Math.random();
+  return Math.random();
 }
 
 function generateStartingHue() {
@@ -841,7 +841,7 @@ export async function bloomImage({
  * @param {number} [options.color.h] - The hue, as a value from 0 to 359.  Defaults to a random value.
  * @param {number} [options.color.s=1] - The saturation, as a value from 0 to 1.  Defaults to 1.
  * @param {number} [options.color.l=0.5] - The lightness, as a value from 0 to 1.  Defaults to 0.5.
- * @param {number} [options.hueVariance] - The amount to mutate the hue by, as a value from 0 to 1.  Defaults to a random value, skewing low.
+ * @param {number} [options.hueVariance] - The amount to mutate the hue by, as a value from 0 to 1.  Defaults to a random value.
  * @param {number} [options.saturationVariance=0.1] - The amount to mutate the saturation by, as a value from 0 to 1.  Defaults to 0.1.
  * @param {number} [options.lightnessVariance=0.5] - The amount to mutate the lightness by, as a value from 0 to 1.  Defaults to 0.5.
  * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
