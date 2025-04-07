@@ -124,7 +124,7 @@ function erasePixel(spawningElement, branch, x, y) {
 }
 
 function mutateHue(h, hueVariance) {
-  let actualMutation = hueVariance * 5;
+  let actualMutation = hueVariance * 7.5;
 
   if (h >= 23 && h <= 27) {
     // Not enough orange

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Color Bloom Test</title>
+
+<script type="module">
+  import * as ColorBloom from "./color-bloom.js";
+
+  ColorBloom.bloomColor({color: {s: 0, l: 0}, triggerOnLoad: true, retriggerOnScreenSizeChange: true});
+
+  const testColorSpan = document.getElementById("testColorSpan");
+  testColorSpan.onmouseover = (event) => {
+    if (!ColorBloom.isBlooming(event.currentTarget)) {
+      ColorBloom.clearCanvas(event.currentTarget);
+      ColorBloom.bloomColor({spawningElement: event.currentTarget, maxRadius: Math.min(window.innerWidth / 4, 200), speed: 0.5});
+    }
+  };
+
+  const testImageSpan = document.getElementById("testImageSpan");
+  testImageSpan.onmouseover = (event) => {
+    if (!ColorBloom.isBlooming(event.currentTarget)) {
+      ColorBloom.clearCanvas(event.currentTarget);
+      ColorBloom.bloomImage({src: 'images/PXL_Avatar_1B.jpg', spawningElement: event.currentTarget, speed: 1, maxRadius: 179, retriggerOnScreenSizeChange: true});
+      testImageSpan.style.visibility = "hidden";
+    }
+  };
+
+  const testImageDiv = document.getElementById("testImageDiv");
+  testImageDiv.onmousemove = (event) => {
+    const {x, y, width, height} = event.currentTarget.getBoundingClientRect();
+    ColorBloom.bloomImage({src: 'images/selfAvatar2.jpg', x: event.clientX - x, y: event.clientY - y, overridingStyles: {zIndex: 1},
+        spawningElement: event.currentTarget, confineToSpawningElement: true, speed: 0.2});
+  };
+  testImageDiv.ontouchmove = (event) => {
+    const {x, y, width, height} = event.currentTarget.getBoundingClientRect();
+    ColorBloom.bloomImage({src: 'images/selfAvatar2.jpg', x: event.touches[0].clientX - x, y: event.touches[0].clientY - y, overridingStyles: {zIndex: 1},
+        spawningElement: event.currentTarget, confineToSpawningElement: true, speed: 0.2});
+  };
+
+  const testDiv = document.getElementById("testDiv");
+  testDiv.onmousemove = (event) => {
+    if (event.buttons === 1)
+    {
+      const {x, y, width, height} = event.currentTarget.getBoundingClientRect();
+      ColorBloom.bloomColor({x: event.clientX - x, y: event.clientY - y,
+          spawningElement: event.currentTarget, confineToSpawningElement: true, speed: 0.2});
+    }
+  };
+  testDiv.onclick = (event) => {
+    const {x, y, width, height} = event.currentTarget.getBoundingClientRect();
+    ColorBloom.bloomColor({x: event.clientX - x, y: event.clientY - y,
+        spawningElement: event.currentTarget, confineToSpawningElement: true});
+  };
+  testDiv.ontouchmove = (event) => {
+    const {x, y, width, height} = event.currentTarget.getBoundingClientRect();
+    ColorBloom.bloomColor({x: event.touches[0].clientX - x, y: event.touches[0].clientY - y,
+        spawningElement: event.currentTarget, confineToSpawningElement: true, speed: 0.2});
+  };
+
+  const downloadAsImageButton = document.getElementById("downloadAsImageButton");
+  downloadAsImageButton.onclick = () => {
+    ColorBloom.downloadAsImage(testDiv);
+  };
+  downloadAsImageButton.onmouseenter = (event) => {
+    if (!Array.from(document.querySelectorAll(":focus-visible")).includes(event.currentTarget)) {
+      ColorBloom.clearCanvas(event.currentTarget);
+      ColorBloom.bloomColor({spawningElement: event.currentTarget, confineToSpawningElement: true});
+    }
+  };
+  downloadAsImageButton.onfocus = (event) => {
+    if (!Array.from(document.querySelectorAll(":hover")).includes(event.currentTarget)) {
+      ColorBloom.clearCanvas(event.currentTarget);
+      ColorBloom.bloomColor({spawningElement: event.currentTarget, confineToSpawningElement: true});
+    }
+  };
+  downloadAsImageButton.onmouseleave = () => {
+    if (!Array.from(document.querySelectorAll(":focus-visible")).includes(event.currentTarget)) {
+      ColorBloom.stopBlooming(event.currentTarget);
+      ColorBloom.bloomErase({spawningElement: event.currentTarget});
+    }
+  };
+  downloadAsImageButton.onblur = () => {
+    if (!Array.from(document.querySelectorAll(":hover")).includes(event.currentTarget)) {
+      ColorBloom.stopBlooming(event.currentTarget);
+      ColorBloom.bloomErase({spawningElement: event.currentTarget});
+    }
+  };
+
+  const resetButton = document.getElementById("resetButton");
+  let timeOut;
+
+  resetButton.onclick = (event) => {
+    const target = event.currentTarget;
+    ColorBloom.clearCanvas(testColorSpan);
+    ColorBloom.clearCanvas(testDiv);
+    ColorBloom.clearCanvas(testImageDiv);
+    ColorBloom.removeCanvas(testImageSpan);
+    testImageSpan.style.visibility = null;
+    ColorBloom.clearCanvas(target);
+
+    ColorBloom.bloomColor({spawningElement: target, maxRadius: Math.min(window.innerWidth / 4, 150)});
+
+    clearTimeout(timeOut);
+    timeOut = setInterval(() => {
+      if (!ColorBloom.isBlooming(target)) {
+        ColorBloom.bloomErase({spawningElement: target});
+        clearInterval(timeOut);
+      }
+    }, 100);
+  };
+</script>
+
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  :root {
+    font-family: sans-serif;
+    font-size: 100%;
+    height: 100%;
+  }
+
+  body {
+    height: 100%;
+    background-color: black;
+    color: white;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: stretch;
+  }
+
+  .element-text {
+    display: inline-block;
+    background: black;
+    padding: 8px 12px;
+    user-select: none;
+    text-align: center;
+  }
+
+  .row {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+
+    > * {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      container-type: size;
+    }
+  }
+
+  button {
+    user-select: none;
+    appearance: none;
+    border: 2px solid white;
+    background: transparent;
+    padding: 8% 12%;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    transition: opacity 0.15s;
+    max-width: 100%;
+
+    &:active {
+      opacity: 0.8;
+    }
+  }
+
+  #downloadAsImageButton {
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgb(0 0 0 / 0.5);
+      z-index: -1;
+    }
+  }
+
+  #resetButton {
+    background: black;
+
+    &:hover {
+      background: #333;
+    }
+  }
+
+  #testDiv, #testImageDiv {
+    touch-action: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid white;
+    width: 100cqmin;
+    height: 100cqmin;
+  }
+</style>
+</head>
+
+<body>
+  <div class="row">
+    <div>
+      <span id="testColorSpan" class="element-text">Hover Over Me</span>
+    </div>
+    <div>
+      <div id="testImageDiv">
+        <span class="element-text">Fill Me In</span>
+      </div>
+    </div>
+    <div>
+      <span id="testImageSpan" class="element-text">Hover Over Me Too</span>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <button id="resetButton">
+        <span>Reset</span>
+      </button>
+    </div>
+    <div>
+      <div id="testDiv">
+        <span class="element-text">Color Me</span>
+      </div>
+    </div>
+    <div>
+      <button id="downloadAsImageButton">
+        <span class="element-text">Download as Image</span>
+      </button>
+    </div>
+  </div>
+</body>
+</html>
