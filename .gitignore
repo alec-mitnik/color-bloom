@@ -1,0 +1,5 @@
+/node_modules
+package-lock.json
+package.json
+eslint.config.mjs
+eslint-plugin-html.d.ts

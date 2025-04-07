@@ -2,7 +2,7 @@ const CANVAS_WRAPPER_ID = "color-bloom-canvas-wrapper";
 const blooms = new Map();
 
 function generateHueMutation() {
-  return Math.random() * Math.random() * 100;
+  return Math.random() * Math.random();
 }
 
 function generateStartingHue() {
@@ -124,7 +124,7 @@ function erasePixel(spawningElement, branch, x, y) {
 }
 
 function mutateHue(h, hueVariance) {
-  let actualMutation = hueVariance * 0.1;
+  let actualMutation = hueVariance * 5;
 
   if (h >= 23 && h <= 27) {
     // Not enough orange
@@ -515,22 +515,12 @@ export function stopErasing(spawningElement = document.body) {
 
 /**
  * Erases from the canvas in the same way as bloomColor colors the canvas
- * @param {{
- *  x?: number,
- *  y?: number,
- *  spawningElement?: HTMLElement,
- *  maxRadius?: number
- *  speed?: number
- * }} options Config options
- * - x: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want to erase at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x`
- * if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
- * - y: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want to erase at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y`
- * if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * - spawningElement: The HTML element to spawn the erasure from.  Defaults to `document.body`.
- * - maxRadius: If specified, stops the erasure once any part of it reaches the specified radius.
- * - speed: The speed of the erasure, as a value from 0 to 1.  Defaults to full speed.
+ * @param {Object} [options] - Config options for the bloom effect.
+ * @param {number} [options.x] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
+ * @param {number} [options.y] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
+ * @param {HTMLElement} [options.spawningElement] - The HTML element to spawn the bloom from.  Defaults to `document.body`.
+ * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
+ * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
  */
 export function bloomErase({
   x: bloomX = NaN,
@@ -656,48 +646,21 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
 
 /**
  * Generates a bloom effect to fill in an image on an HTML canvas
- * @param {{
- *  x?: number,
- *  y?: number,
-*  overridingStyles?: CSSStyleDeclaration,
- *  imageX?: number,
- *  imageY?: number,
- *  widthOverride?: number,
- *  heightOverride?: number,
- *  spawningElement?: HTMLElement,
- *  src: string,
- *  maxRadius?: number
- *  speed?: number
- *  triggerOnLoad?: boolean
- *  retriggerOnScreenSizeChange?: boolean
- *  confineToSpawningElement?: boolean
- * }} options Config options
- * - x: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x`
- * if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
- * - y: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y`
- * if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * - overridingStyles: An object of overriding styles to apply to the canvas wrapper, such as zIndex.
- * - imageX: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want the image at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x`
- * if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
- * - imageY: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want the image at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y`
- * if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * - widthOverride: Override the width of the image.  If not provided, the image file's inherent width will be used.
- * To size the image to the spawning element, use `spawningElement.getBoundingClientRect().width`.
- * - heightOverride: Override the height of the image.  If not provided, the image file's inherent height will be used.
- * To size the image to the spawning element, use `spawningElement.getBoundingClientRect().height`.
- * - spawningElement: The HTML element to spawn the bloom from.  Defaults to `document.body`.
- * - src: The URL of the image to bloom.
- * - maxRadius: If specified, stops the bloom once any part of it reaches the specified radius.
- * - speed: The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
- * - triggerOnLoad: If true, waits until the document loads, if it hasn't already.  For convenience.
- * - retriggerOnScreenSizeChange: On window resize, blooms are automatically cleared if the screen size or container size changes
- * (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
- * - confineToSpawningElement: If true, the bloom canvas will be contained within the of the spawning element,
- * and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
+ * @param {Object} [options] - Config options for the bloom effect.
+ * @param {number} [options.x] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
+ * @param {number} [options.y] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
+ * @param {CSSStyleDeclaration} [options.overridingStyles] - An object of overriding styles to apply to the canvas wrapper, such as zIndex.
+ * @param {number} [options.imageX] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want the image centered at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
+ * @param {number} [options.imageY] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want the image centered at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
+ * @param {number} [options.widthOverride] - Overrides the width of the image.  If not provided, the image file's inherent width will be used.  To size the image to the spawning element, use `spawningElement.getBoundingClientRect().width`.
+ * @param {number} [options.heightOverride] - Overrides the height of the image.  If not provided, the image file's inherent height will be used.  To size the image to the spawning element, use `spawningElement.getBoundingClientRect().height`.
+ * @param {HTMLElement} [options.spawningElement] - The HTML element to spawn the bloom from.  Defaults to `document.body`.
+ * @param {string} [options.src] - The URL of the image to bloom.
+ * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
+ * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
+ * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already.  For convenience.
+ * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
+ * @param {boolean} [options.confineToSpawningElement] - If true, the bloom canvas will be contained within the of the spawning element, and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
  */
 export async function bloomImage({
   x: bloomX = NaN,
@@ -868,41 +831,24 @@ export async function bloomImage({
 }
 
 /**
- * Generates a bloom of color on an HTML canvas
- * @param {{
- *  x?: number,
- *  y?: number,
- *  overridingStyles?: CSSStyleDeclaration,
- *  spawningElement?: HTMLElement,
- *  color?: {h?: number, s?: number, l?: number},
- *  hueVariance?: number,
- *  saturationVariance?: number,
- *  lightnessVariance?: number
- *  maxRadius?: number
- *  speed?: number
- *  triggerOnLoad?: boolean
- *  retriggerOnScreenSizeChange?: boolean
- *  confineToSpawningElement?: boolean
- * }} options Config options
- * - x: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x`
- * if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
- * - y: Will be the center of the canvas or aligned with the center of a specified spawning element by default.
- * If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y`
- * if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * - overridingStyles: An object of overriding styles to apply to the canvas wrapper, such as zIndex.
- * - spawningElement: The HTML element to spawn the bloom from.  Defaults to `document.body`.
- * - color: The starting color in HSL color space.  Defaults to a random hue, full saturation, and mid lightness.
- * - hueVariance: The amount to mutate the hue by, as a value from 0 to 1.  Defaults to a random value, skewing low.
- * - saturationVariance: The amount to mutate the saturation by, as a value from 0 to 1.  Defaults to 0.1.
- * - lightnessVariance: The amount to mutate the lightness by, as a value from 0 to 1.  Defaults to 0.5.
- * - maxRadius: If specified, stops the bloom once any part of it reaches the specified radius.
- * - speed: The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
- * - triggerOnLoad: If true, waits until the document loads, if it hasn't already.  For convenience.
- * - retriggerOnScreenSizeChange: On window resize, blooms are automatically cleared if the screen size or container size changes
- * (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
- * - confineToSpawningElement: If true, the bloom canvas will be contained within the of the spawning element,
- * and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
+ * Generates a bloom of color on an HTML canvas.
+ * @param {Object} [options] - Config options for the bloom effect.
+ * @param {number} [options.x] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
+ * @param {number} [options.y] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
+ * @param {CSSStyleDeclaration} [options.overridingStyles] - An object of overriding styles to apply to the canvas wrapper, such as zIndex.
+ * @param {HTMLElement} [options.spawningElement] - The HTML element to spawn the bloom from.  Defaults to `document.body`.
+ * @param {Object} [options.color] - The starting color in HSL color space.  Defaults to a random hue, full saturation, and mid lightness.
+ * @param {number} [options.color.h] - The hue, as a value from 0 to 359.  Defaults to a random value.
+ * @param {number} [options.color.s=1] - The saturation, as a value from 0 to 1.  Defaults to 1.
+ * @param {number} [options.color.l=0.5] - The lightness, as a value from 0 to 1.  Defaults to 0.5.
+ * @param {number} [options.hueVariance] - The amount to mutate the hue by, as a value from 0 to 1.  Defaults to a random value, skewing low.
+ * @param {number} [options.saturationVariance=0.1] - The amount to mutate the saturation by, as a value from 0 to 1.  Defaults to 0.1.
+ * @param {number} [options.lightnessVariance=0.5] - The amount to mutate the lightness by, as a value from 0 to 1.  Defaults to 0.5.
+ * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
+ * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
+ * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already.  For convenience.
+ * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
+ * @param {boolean} [options.confineToSpawningElement] - If true, the bloom canvas will be contained within the of the spawning element, and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
  */
 export function bloomColor({
   x: bloomX = NaN,
