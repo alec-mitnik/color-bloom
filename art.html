@@ -323,6 +323,8 @@ function addBrushstroke(x, y, finishing = false) {
   // }
   // brushStrokeCounter = 0;
 
+  console.log("adding brushstroke:", x, y, finishing);
+
   const brushSize = getToolbarData().brushSize - 2; // TODO
   const canvas = getBrushCanvas();
 
@@ -430,11 +432,12 @@ function addBrushstroke(x, y, finishing = false) {
   } else {
     // addBrushPoint(x, y, brushSize);
 
-    // context.beginPath();
+    context.beginPath();
     context.moveTo(x, y);
     context.lineTo(x, y);
     context.stroke();
     // context.closePath();
+    console.log("Single stroke");
   }
 
   previousBrushstrokePoints.unshift({x, y});
@@ -1356,11 +1359,7 @@ function onCanvasTouchStart(event) {
       stopGrowth();
       storeBrushHistory();
       brushPixelsChanged = false;
-
       isDrawing = true;
-      const canvas = getBrushCanvas();
-      const context = canvas.getContext("2d");
-      context.beginPath();
 
       let {x, y} = getCanvasCoordinates(event.touches[0].clientX, event.touches[0].clientY);
       addBrushstroke(x, y);
