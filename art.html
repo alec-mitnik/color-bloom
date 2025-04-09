@@ -1089,6 +1089,7 @@ function onCanvasClick(event) {
 function onCanvasMouseMove(event) {
   setCssVar('--mouse-x', `${event.clientX}px`);
   setCssVar('--mouse-y', `${event.clientY}px`);
+  console.log("MOUSE MOVE");
 
   if (!interactive) {
     return;
@@ -1118,6 +1119,7 @@ function onCanvasMouseMove(event) {
 
 function onCanvasTouchMove(event) {
   event.preventDefault();
+  console.log("TOUCH MOVE");
 
   let netMovementX = 0, netMovementY = 0;
 
@@ -1315,6 +1317,7 @@ function resumeInteraction() {
 }
 
 function onCanvasMouseUp() {
+  console.log("MOUSE UP");
   finishDrawing();
 
   setCssVar('--toolbar-pointer-events', 'all');
@@ -1360,6 +1363,7 @@ function onCanvasTouchStart(event) {
       addBrushstroke(x, y);
     }
   } else {
+    finishDrawing();
     document.getElementById("canvasWrapper").classList.add("positioning");
   }
 
@@ -1367,6 +1371,8 @@ function onCanvasTouchStart(event) {
 }
 
 function onCanvasTouchEnd(event) {
+  console.log("TOUCH END");
+
   for (const touch of event.changedTouches) {
     touches.delete(touch.identifier);
   }
