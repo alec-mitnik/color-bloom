@@ -734,7 +734,17 @@ export async function bloomImage({
         spawningElement.style.position = "relative";
         spawningElement.insertBefore(canvasWrapper, spawningElement.firstChild);
       } else {
-        document.body.insertBefore(canvasWrapper, document.body.firstChild);
+        // position: fixed breaks on mobile for direct children of body
+        const canvasWrapperWrapper = document.createElement("div");
+        Object.assign(canvasWrapperWrapper.style, {
+          position: "absolute",
+          inset: 0,
+          zIndex: -1,
+          overflow: "hidden",
+        });
+
+        canvasWrapperWrapper.appendChild(canvasWrapper);
+        document.body.insertBefore(canvasWrapperWrapper, document.body.firstChild);
       }
     }
 
@@ -934,7 +944,17 @@ export function bloomColor({
         spawningElement.style.position = "relative";
         spawningElement.insertBefore(canvasWrapper, spawningElement.firstChild);
       } else {
-        document.body.insertBefore(canvasWrapper, document.body.firstChild);
+        // position: fixed breaks on mobile for direct children of body
+        const canvasWrapperWrapper = document.createElement("div");
+        Object.assign(canvasWrapperWrapper.style, {
+          position: "absolute",
+          inset: 0,
+          zIndex: -1,
+          overflow: "hidden",
+        });
+
+        canvasWrapperWrapper.appendChild(canvasWrapper);
+        document.body.insertBefore(canvasWrapperWrapper, document.body.firstChild);
       }
     }
 
