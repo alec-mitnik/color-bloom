@@ -9,17 +9,16 @@
 "use strict"
 
 /* TODO:
- * - Smoothing makes brushstroke approximation unreliable for detecting changes and scoping the sync
  * - Add eraser brush, or maybe just add eraser toggle to both brush and fill, and color selection for brush
  * - Support width varying by speed of strokes or pressure of touch/stylus
  * - Support min/max thickness settings for generated patterns
  * - Support custom canvas sizes
  * - Support uploading own images as templates
- * - Add toggle for reference lines for quarters/thirds/center
  * - Add share option (possible with image?)
  * - Add tip button
- * - Investigate mouse/touch down triggering twice for click on mobile
+ * - Investigate taps not drawing on mobile
  * - Use putImageData for batch rendering?  Allow configurable or even instant rendering?
+ * - Consider using pointer events instead of separate mouse and touch events
  */
 
 let CANVAS_WIDTH = 1920;
@@ -1227,6 +1226,8 @@ async function finishDrawing() {
     // finishBrushstrokes();
     isDrawing = false;
 
+    console.log("Points:", allBrushstrokePoints.length, allBrushstrokePoints);
+
     if (allBrushstrokePoints.length) {
       pauseInteraction();
 
@@ -1292,6 +1293,8 @@ async function finishDrawing() {
 
       allBrushstrokePoints = [];
     }
+
+    console.log("Pixels Changed:", brushPixelsChanged);
 
     // TODO - smoothing makes the current approximation unreliable
     if (!brushPixelsChanged) {
@@ -1851,6 +1854,10 @@ body, #canvasWrapper {
     }
 
     &.cursor {
+      @media (hover: none) {
+        display: none;
+      }
+
       background-color: #0000ff;
       opacity: 0.1;
       top: -1px;
