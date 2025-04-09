@@ -16,7 +16,6 @@
  * - Support uploading own images as templates
  * - Add share option (possible with image?)
  * - Add tip button
- * - Investigate taps not drawing on mobile
  * - Use putImageData for batch rendering?  Allow configurable or even instant rendering?
  * - Consider using pointer events instead of separate mouse and touch events
  */
@@ -323,8 +322,6 @@ function addBrushstroke(x, y, finishing = false) {
   // }
   // brushStrokeCounter = 0;
 
-  console.log("adding brushstroke:", x, y, finishing);
-
   const brushSize = getToolbarData().brushSize - 2; // TODO
   const canvas = getBrushCanvas();
 
@@ -434,10 +431,10 @@ function addBrushstroke(x, y, finishing = false) {
 
     context.beginPath();
     context.moveTo(x, y);
-    context.lineTo(x, y);
+    // iOS Safari won't render a line with a single point, so add a tiny offset
+    context.lineTo(x + 0.01, y);
     context.stroke();
     // context.closePath();
-    console.log("Single stroke");
   }
 
   previousBrushstrokePoints.unshift({x, y});
@@ -1072,8 +1069,6 @@ function handleClick(clickX, clickY) {
 }
 
 function onCanvasClick(event) {
-  console.log("MOUSE CLICK");
-
   // event.buttons is not set for click events
   if (!interactive) {
     return;
@@ -1091,7 +1086,6 @@ function onCanvasClick(event) {
 function onCanvasMouseMove(event) {
   setCssVar('--mouse-x', `${event.clientX}px`);
   setCssVar('--mouse-y', `${event.clientY}px`);
-  console.log("MOUSE MOVE");
 
   if (!interactive) {
     return;
@@ -1121,7 +1115,6 @@ function onCanvasMouseMove(event) {
 
 function onCanvasTouchMove(event) {
   event.preventDefault();
-  console.log("TOUCH MOVE");
 
   let netMovementX = 0, netMovementY = 0;
 
@@ -1174,7 +1167,6 @@ function viewCanvas() {
 
 function onCanvasMouseDown(event) {
   previousBrushstrokePoints = [];
-  console.log("MOUSE DOWN");
 
   if (!interactive) {
     return;
@@ -1229,8 +1221,6 @@ async function finishDrawing() {
     // finishBrushstrokes();
     isDrawing = false;
 
-    console.log("Points:", allBrushstrokePoints.length, allBrushstrokePoints);
-
     if (allBrushstrokePoints.length) {
       pauseInteraction();
 
@@ -1248,7 +1238,8 @@ async function finishDrawing() {
           firstPoint.y = midY;
         }
 
-        allBrushstrokePoints.push({...lastPoint});
+        // iOS Safari won't render a line with a single point, so add a tiny offset
+        allBrushstrokePoints.push({...lastPoint, x: lastPoint.x + 0.01});
       }
 
       const brushSize = getToolbarData().brushSize;
@@ -1285,9 +1276,7 @@ async function finishDrawing() {
       }
 
       canvasContext.lineTo(allBrushstrokePoints[allBrushstrokePoints.length - 1].x, allBrushstrokePoints[allBrushstrokePoints.length - 1].y);
-
       canvasContext.stroke();
-      canvasContext.closePath();
 
       console.log("Syncing...");
       await syncPixelGridToBrushCanvas();
@@ -1296,8 +1285,6 @@ async function finishDrawing() {
 
       allBrushstrokePoints = [];
     }
-
-    console.log("Pixels Changed:", brushPixelsChanged);
 
     // TODO - smoothing makes the current approximation unreliable
     if (!brushPixelsChanged) {
@@ -1323,7 +1310,6 @@ function resumeInteraction() {
 }
 
 function onCanvasMouseUp() {
-  console.log("MOUSE UP");
   finishDrawing();
 
   setCssVar('--toolbar-pointer-events', 'all');
@@ -1335,7 +1321,6 @@ function onCanvasMouseUp() {
 
 function onCanvasTouchStart(event) {
   previousBrushstrokePoints = [];
-  console.log("TOUCH START");
 
   if (!interactive) {
     return;
@@ -1373,8 +1358,6 @@ function onCanvasTouchStart(event) {
 }
 
 function onCanvasTouchEnd(event) {
-  console.log("TOUCH END");
-
   for (const touch of event.changedTouches) {
     touches.delete(touch.identifier);
   }
