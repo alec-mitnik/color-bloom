@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <title>Color Bloom</title>
 
 <style>
@@ -89,7 +89,7 @@ function step() {
 
 function getColorString(h, s, v) {
 	let colorString;
-	
+
 	if (useHSL) {
 		colorString =  `hsl(${h}, ${
 			Math.floor(s * 101)
@@ -100,7 +100,7 @@ function getColorString(h, s, v) {
 		const [r, g, b] = hsv2rgb(h, s, v);
 		colorString =  `rgb(${r}, ${g}, ${b})`;
 	}
-	
+
 	return colorString;
 }
 
@@ -137,7 +137,7 @@ function mutateHue(h) {
 			actualMutation /= 2;
 		}
 	}
-	
+
 	// return (h + actualMutation + 360) % 360;
 	return (Math.random() * actualMutation * 2 - actualMutation + h + 360) % 360;
 }
@@ -150,7 +150,7 @@ function mutateSaturation(s) {
 
 function mutateValue(v) {
 	const newValue = (Math.random() * (VALUE_MUTATION * 2)) - VALUE_MUTATION + v;
-	
+
 	if (useHSL) {
 		return Math.max(Math.min(newValue, MAX_LIGHTNESS), MIN_LIGHTNESS)
 	} else {
@@ -160,14 +160,14 @@ function mutateValue(v) {
 
 function growBranch() {
 	randBranch = randEl(branches);
-	
+
 	const neighbors = [
 		{x: randBranch.x - 1, y: randBranch.y},
 		{x: randBranch.x + 1, y: randBranch.y},
 		{x: randBranch.x, y: randBranch.y - 1},
 		{x: randBranch.x, y: randBranch.y + 1},
 	];
-	
+
 	while (neighbors.length) {
 		const neighbor = pluckRandEl(neighbors);
 		if (neighbor.x >= 0 && neighbor.x < CANVAS_WIDTH
@@ -182,7 +182,7 @@ function growBranch() {
 			);
 		}
 	};
-	
+
 	if (!neighbors.length) {
 		removeEl(branches, randBranch);
 	}
@@ -194,18 +194,18 @@ function addRandomPixel(x, y) {
 
 async function grow(x, y) {
 	addRandomPixel(x, y);
-	
+
 	let growths = 1;
 
 	if (!growthActive) {
 		growthActive = true;
 		while (branches.length) {
 			growBranch();
-			
+
 			if (growths % DELAY_THRESHOLD === 0) {
 				await step();
 			}
-			
+
 			growths++;
 		}
 		growthActive = false;
@@ -218,22 +218,22 @@ function handleClick(clickX, clickY, useNewValues) {
 	let {x, y} = canvas.getBoundingClientRect();
 	x = Math.round(clickX - x);
 	y = Math.round(clickY - y);
-	
+
 	if (x >= 0 && x < CANVAS_WIDTH
 			&& y >= 0 && y < CANVAS_HEIGHT) {
 		pixelGrid = Array.from({length: CANVAS_WIDTH},
 				() => Array.from({length: CANVAS_HEIGHT}));
 		branches = [];
-		
+
 		if (!growthActive) {
 			if (useNewValues) {
 				HUE_MUTATION = generateHueMutation();
 				STARTING_HUE = generateStartingHue();
 			}
-			
+
 			setTimeout(() => grow(x, y));
 		}
-		
+
 		growthActive = false;
 	}
 }
@@ -243,7 +243,7 @@ function onCanvasClick(event) {
 	if (!interactive || event.button !== 0) {
 		return;
 	}
-	
+
 	handleClick(event.x, event.y);
 }
 
@@ -256,7 +256,7 @@ function init() {
 	let canvas = document.getElementById("theCanvas");
 	canvas.width = CANVAS_WIDTH;
 	canvas.height = CANVAS_HEIGHT;
-	
+
 	grow(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
 }
 </script>

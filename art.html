@@ -2,10 +2,12 @@
 <html onmousemove="onCanvasMouseMove(event)">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <title>Color Bloom</title>
 
 <script>
+"use strict"
+
 /* TODO:
  * - Smoothing makes brushstroke approximation unreliable for detecting changes and scoping the sync
  * - Add eraser brush, or maybe just add eraser toggle to both brush and fill, and color selection for brush
@@ -16,6 +18,8 @@
  * - Add toggle for reference lines for quarters/thirds/center
  * - Add share option (possible with image?)
  * - Add tip button
+ * - Investigate mouse/touch down triggering twice for click on mobile
+ * - Use putImageData for batch rendering?  Allow configurable or even instant rendering?
  */
 
 let CANVAS_WIDTH = 1920;
@@ -54,7 +58,7 @@ function generateStartingHue() {
   return Math.random() * 360;
 }
 
-function getStartingHue() {
+function getStartingColor() {
   return rgb2hsl(...hex2rgb(getToolbarData().fillColor));
 }
 
@@ -192,7 +196,7 @@ function step() {
 }
 
 function getColorString(h, s, l, a = 1) {
-  let colorString = `hsla(${h}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%, ${a})`;
+  const colorString = `hsla(${h}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%, ${a})`;
   return colorString;
 }
 
@@ -203,15 +207,16 @@ function drawPixel(pixel, canvas) {
   context.fillRect(pixel.x, pixel.y, 1, 1);
 }
 
-function addFillPixel(x, y, h, s, l, a = 1) {
+function addFillPixel(x, y, h, s, l) {
   const fillPixelGrid = getFillPixelGrid();
   const existingPixel = fillPixelGrid[x][y];
   let pixelToDraw = {x, y, h, s, l};
 
-  if (existingPixel && a < 1) {
+  if (existingPixel) {
     pixelToDraw = {...pixelToDraw, ...blendHslWithAlpha(pixelToDraw, existingPixel)};
   }
 
+  // The pixel grid data needs to reflect the original color so that branches stemming from it won't be diluted.
   // Allow brushstroke to be distinguished for unfill TODO - unnecessary now?
   const pixel = {x, y, h, s, l: Math.max(l, 0.01), a: 1};
   fillPixelGrid[x][y] = pixel;
@@ -264,7 +269,7 @@ function erasePixel(x, y, erasingOutline) {
   }
 }
 
-function addBrushPoint(x, y, brushSize, drawPixels = false) {
+/* function addBrushPoint(x, y, brushSize, drawPixels = false) {
   const neighborDepth = (brushSize - 1) * 0.5;
   const neighborDepthSquared = neighborDepth ** 2;
   const gridDepth = Math.ceil(neighborDepth + 4);
@@ -307,7 +312,7 @@ function addBrushPoint(x, y, brushSize, drawPixels = false) {
       // }
     }
   }
-}
+} */
 
 // TODO
 const BRUSH_STROKE_REPEATS = 50;
@@ -322,13 +327,6 @@ function addBrushstroke(x, y, finishing = false) {
   const brushSize = getToolbarData().brushSize - 2; // TODO
   const canvas = getBrushCanvas();
 
-  const brushRadius = Math.ceil((brushSize + 4) / 2);
-
-  // Just an approximation...
-  if (x >= -brushRadius && x < canvas.width + brushRadius && y >= -brushRadius && y < canvas.height + brushRadius) {
-    brushPixelsChanged = true;
-  }
-
   const context = canvas.getContext("2d");
   context.strokeStyle = "black";
   context.lineWidth = brushSize - 2;
@@ -339,7 +337,7 @@ function addBrushstroke(x, y, finishing = false) {
   context.shadowBlur = 2;
 
   // TODO
-  if (false && previousBrushstrokePoints.length > 1) {
+  /* if (false && previousBrushstrokePoints.length > 1) {
     const {x: refX, y: refY} = previousBrushstrokePoints[1]; // Reference point
     const {x: prevX, y: prevY} = previousBrushstrokePoints[0]; // Start point
 
@@ -402,7 +400,7 @@ function addBrushstroke(x, y, finishing = false) {
       // context.arc(controlPointX, controlPointY, 2, 0, 2 * Math.PI);
       // context.fill();
     // }
-  } else if (previousBrushstrokePoints.length) {
+  } else  */if (previousBrushstrokePoints.length) {
     context.beginPath();
     context.moveTo(previousBrushstrokePoints[previousBrushstrokePoints.length - 1].x, previousBrushstrokePoints[previousBrushstrokePoints.length - 1].y);
 
@@ -468,7 +466,7 @@ function getSmoothingSquaredDistance() {
 }
 
 // TODO
-function getTangent(p1, p2) {
+/* function getTangent(p1, p2) {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
@@ -478,7 +476,7 @@ function getTangent(p1, p2) {
     x: dist > 0 ? dx / dist : 0,
     y: dist > 0 ? dy / dist : 0
   };
-}
+} */
 
 function mutateHue(h) {
   let actualMutation = HUE_MUTATION * 7.5;
@@ -518,7 +516,7 @@ function mutateLightness(l, s) {
 }
 
 function growBranch(erase = false, erasingOutline = false) {
-  randBranch = randEl(branches);
+  const randBranch = randEl(branches);
 
   const neighbors = [
     {x: randBranch.x - 1, y: randBranch.y},
@@ -533,15 +531,12 @@ function growBranch(erase = false, erasingOutline = false) {
         && neighbor.y >= 0 && neighbor.y < CANVAS_HEIGHT) {
       if (!erase) {
         if (!(getFillPixelGrid()[neighbor.x][neighbor.y]?.a === 1) && !countsAsOutlineAt(neighbor.x, neighbor.y)) {
-          const a = 1 - (getFillPixelGrid()[neighbor.x][neighbor.y]?.a || 0);
-
           addFillPixel(
             neighbor.x,
             neighbor.y,
             mutateHue(randBranch.h),
             mutateSaturation(randBranch.s),
             mutateLightness(randBranch.l, randBranch.s),
-            a,
           );
         }
       } else {
@@ -586,7 +581,7 @@ function countsAsOutlineAt(x, y) {
   // return neighbors.every(neighbor => !pixelGrid[neighbor.x]?.[neighbor.y] || pixelGrid[neighbor.x]?.[neighbor.y]?.a >= 0.5);
 }
 
-function addRandomPixel(x, y) {
+function addStartingPixel(x, y) {
   addFillPixel(x, y, STARTING_HUE, STARTING_SATURATION, STARTING_LIGHTNESS);
 }
 
@@ -598,7 +593,7 @@ async function grow(x, y, erase = false, erasingOutline = false) {
     storeBrushHistory();
 
     if (erase === false) {
-      addRandomPixel(x, y);
+      addStartingPixel(x, y);
     } else {
       erasePixel(x, y, erasingOutline);
     }
@@ -617,6 +612,9 @@ async function grow(x, y, erase = false, erasingOutline = false) {
     }
 
     stopGrowth();
+  } else if (erase === false) {
+    // TODO
+    addStartingPixel(x, y);
   }
 }
 
@@ -724,7 +722,7 @@ function storeBrushHistory() {
   }
 }
 
-// TODO
+// eslint-disable-next-line no-unused-vars
 function downloadAsImage() {
   if (!interactive) {
     return;
@@ -747,6 +745,7 @@ function downloadAsImage() {
   canvas.remove();
 }
 
+// eslint-disable-next-line no-unused-vars
 function undo() {
   if (!interactive) {
     return;
@@ -798,6 +797,7 @@ function undoBrush(allowRedo = true) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function redo() {
   if (!interactive) {
     return;
@@ -875,50 +875,80 @@ function updateHistoryButtons() {
   }
 } */
 
-function getImageDataIndex(x, y, canvasWidth) {
+// TODO
+/* function getImageDataIndex(x, y, canvasWidth) {
   return (y * canvasWidth + x) * 4;
-}
+} */
 
 async function syncPixelGridToBrushCanvas() {
   const canvas = getBrushCanvas();
   const context = canvas.getContext("2d");
   context.shadowBlur = 0;
   const previousPixelGrid = brushPixelGridHistory[brushHistoryIndex + 1];
-  brushPixelGridHistory[brushHistoryIndex] = Array.from({length: CANVAS_WIDTH}, (_elX, x) => Array.from({length: CANVAS_HEIGHT}, (_elY, y) => previousPixelGrid[x]?.[y]));
-  const pixelGrid = getBrushPixelGrid();
-  const brushRadius = Math.ceil((getToolbarData().brushSize + 2) / 2);
-
   const {data} = context.getImageData(0, 0, canvas.width, canvas.height);
 
-  let counter = Math.floor(-DELAY_THRESHOLD / (brushRadius * 0.1));
+  brushPixelGridHistory[brushHistoryIndex] = Array.from({length: CANVAS_WIDTH},
+      (_elX, x) => Array.from({length: CANVAS_HEIGHT}, (_elY, y) => {
+    // return previousPixelGrid[x]?.[y];
 
-  for (const {x, y} of allBrushstrokePoints) {
-    for (let i = -brushRadius; i <= brushRadius; i++) {
-      for (let j = -brushRadius; j <= brushRadius; j++) {
-        const pointX = x + i;
-        const pointY = y + j;
+    const index = (y * CANVAS_WIDTH + x) * 4;
+    // TODO - support other colors?
+    // const r = data[index];
+    // const g = data[index + 1];
+    // const b = data[index + 2];
+    const a = data[index + 3] / 255;
 
-        if (pointX < 0 || pointX >= canvas.width || pointY < 0 || pointY >= canvas.height) {
-          continue;
-        }
+    // let {h, s, l} = rgb2hsl(r, g, b);
 
-        const index = getImageDataIndex(pointX, pointY, canvas.width);
-        let a = data[index + 3] / 255;
+    // if (a > 0.2 && l < 0.5) {
+    //   const pixel = {x: i, y: j, h: 0, s: 0, l: 0};
+    //   pixelGrid[i][j] = pixel;
+    //   drawPixel(pixel, getBrushCanvas());
+    // }
 
-        if (a > 0) {
-          const pixel = {x: pointX, y: pointY, h: 0, s: 0, l: 0, a: Math.max(a, pixelGrid[pointX]?.[pointY]?.a || 0)};
-          pixelGrid[pointX][pointY] = pixel;
-        }
-      }
+    const pixel = a > 0 ? {x, y, h: 0, s: 0, l: 0, a} : undefined;
+
+    // TODO - support other colors?
+    if (previousPixelGrid[x][y] && !pixel || pixel && !previousPixelGrid[x][y]
+          || pixel?.a !== previousPixelGrid[x][y]?.a) {
+      brushPixelsChanged = true;
     }
 
-    if (counter % DELAY_THRESHOLD === 0) {
-      // console.log("awaiting");
-      await step();
-    }
+    return pixel;
+  }));
 
-    counter++;
-  }
+  // const pixelGrid = getBrushPixelGrid();
+  // const brushRadius = Math.ceil((getToolbarData().brushSize + 2) / 2);
+
+  // let counter = Math.floor(-DELAY_THRESHOLD / (brushRadius * 0.1));
+
+  // for (const {x, y} of allBrushstrokePoints) {
+  //   for (let i = -brushRadius; i <= brushRadius; i++) {
+  //     for (let j = -brushRadius; j <= brushRadius; j++) {
+  //       const pointX = x + i;
+  //       const pointY = y + j;
+
+  //       if (pointX < 0 || pointX >= canvas.width || pointY < 0 || pointY >= canvas.height) {
+  //         continue;
+  //       }
+
+  //       const index = getImageDataIndex(pointX, pointY, canvas.width);
+  //       let a = data[index + 3] / 255;
+
+  //       if (a > 0) {
+  //         const pixel = {x: pointX, y: pointY, h: 0, s: 0, l: 0, a: Math.max(a, pixelGrid[pointX]?.[pointY]?.a || 0)};
+  //         pixelGrid[pointX][pointY] = pixel;
+  //       }
+  //     }
+  //   }
+
+  //   if (counter % DELAY_THRESHOLD === 0) {
+  //     // console.log("awaiting");
+  //     await step();
+  //   }
+
+  //   counter++;
+  // }
 
   // for (let i = 0; i < CANVAS_WIDTH; i++) {
   //   for (let j = 0; j < CANVAS_HEIGHT; j++) {
@@ -951,6 +981,7 @@ async function syncPixelGridToBrushCanvas() {
   // }
 }
 
+// eslint-disable-next-line no-unused-vars
 function resetCanvas() {
   if (!interactive) {
     return;
@@ -1014,7 +1045,7 @@ function handleClick(clickX, clickY) {
 
     if (selectedTool === "fill" && !getFillPixelGrid()[x][y] && !countsAsOutlineAt(x, y)) {
       if (!growthActive) {
-        const {h, s, l} = getStartingHue();
+        const {h, s, l} = getStartingColor();
         STARTING_HUE = h;
         STARTING_SATURATION = s;
         STARTING_LIGHTNESS = l;
@@ -1022,20 +1053,25 @@ function handleClick(clickX, clickY) {
         HUE_MUTATION = toolbarData.hueMutation;
         SATURATION_MUTATION = toolbarData.saturationMutation;
         LIGHTNESS_MUTATION = toolbarData.valueMutation;
-
-        setTimeout(() => grow(x, y));
       }
+
+      // TODO
+      setTimeout(() => grow(x, y));
     } else if (selectedTool === "unfill" && (getFillPixelGrid()[x][y] || getBrushPixelGrid()[x][y])) {
       if (!growthActive) {
         setTimeout(() => grow(x, y, true, !!getBrushPixelGrid()[x][y]));
+      } else {
+        stopGrowth();
       }
     }
   }
 
-  stopGrowth();
+  // stopGrowth();
 }
 
 function onCanvasClick(event) {
+  console.log("MOUSE CLICK");
+
   // event.buttons is not set for click events
   if (!interactive) {
     return;
@@ -1051,17 +1087,24 @@ function onCanvasClick(event) {
 }
 
 function onCanvasMouseMove(event) {
+  setCssVar('--mouse-x', `${event.clientX}px`);
+  setCssVar('--mouse-y', `${event.clientY}px`);
+
   if (!interactive) {
     return;
   }
 
   // event.buttons is 1 for the primary button (left click)
-  if (event.buttons === 1 && isDrawing) {
+  if (event.buttons === 1) {
     const selectedTool = getToolbarData().tool;
 
-    if (selectedTool === "brush") {
-      let {x, y} = getCanvasCoordinates(event.x, event.y);
-      addBrushstroke(x, y);
+    if (isDrawing) {
+      if (selectedTool === "brush") {
+        let {x, y} = getCanvasCoordinates(event.x, event.y);
+        addBrushstroke(x, y);
+      }
+    } else if (selectedTool === "fill") { // TODO - space them out more
+      handleClick(event.clientX, event.clientY);
     }
   } else if (event.buttons !== 1 && document.getElementById("canvasWrapper").classList.contains("positioning")) {
     const offsetLimitX = window.innerWidth * 0.6;
@@ -1114,12 +1157,20 @@ function toggleMenuCollapse(event) {
   }
 }
 
+function toggleGuidelines() {
+  for (const guide of document.getElementsByClassName("guide")) {
+    guide.classList.toggle("hidden");
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
 function viewCanvas() {
   document.getElementById("toolbar").classList.add("hidden");
 }
 
 function onCanvasMouseDown(event) {
   previousBrushstrokePoints = [];
+  console.log("MOUSE DOWN");
 
   if (!interactive) {
     return;
@@ -1155,7 +1206,8 @@ function onCanvasMouseDown(event) {
   setCssVar('--toolbar-pointer-events', 'none');
 }
 
-function finishBrushstrokes() {
+// TODO
+/* function finishBrushstrokes() {
   if (isDrawing && previousBrushstrokePoints.length) {
     const context = getBrushCanvas().getContext("2d");
 
@@ -1166,7 +1218,7 @@ function finishBrushstrokes() {
     previousBrushstrokePoints = [];
     // allBrushstrokePoints = [];
   }
-}
+} */
 
 async function finishDrawing() {
   if (isDrawing) {
@@ -1262,7 +1314,7 @@ function resumeInteraction() {
   document.body.style.cursor = null;
 }
 
-function onCanvasMouseUp(event) {
+function onCanvasMouseUp() {
   finishDrawing();
 
   setCssVar('--toolbar-pointer-events', 'all');
@@ -1274,6 +1326,7 @@ function onCanvasMouseUp(event) {
 
 function onCanvasTouchStart(event) {
   previousBrushstrokePoints = [];
+  console.log("TOUCH START");
 
   if (!interactive) {
     return;
@@ -1293,6 +1346,7 @@ function onCanvasTouchStart(event) {
     const selectedTool = getToolbarData().tool;
 
     if (selectedTool === "brush") {
+      event.preventDefault();
       stopGrowth();
       storeBrushHistory();
       brushPixelsChanged = false;
@@ -1342,8 +1396,11 @@ function onCanvasMouseEnter(event) {
   }
 }
 
-function onCanvasMouseLeave(event) {
+function onCanvasMouseLeave() {
   // finishBrushstrokes();
+
+  setCssVar('--mouse-x', `${-1000}px`);
+  setCssVar('--mouse-y', `${-1000}px`);
 }
 
 function onCanvasScroll(event) {
@@ -1380,6 +1437,7 @@ function stopGrowth() {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function loadTemplate(filename) {
   if (!interactive) {
     return;
@@ -1393,6 +1451,7 @@ function loadTemplate(filename) {
   };
 }
 
+// eslint-disable-next-line no-unused-vars
 function generateEllipsesPattern() {
   if (!interactive) {
     return;
@@ -1432,11 +1491,14 @@ function generateEllipsesPattern() {
 
   const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  drawImageData(data)
+  drawImageData(data);
 
   canvas.remove();
+
+  updateHistoryButtons();
 }
 
+// eslint-disable-next-line no-unused-vars
 function generateRectanglesPattern() {
   if (!interactive) {
     return;
@@ -1475,11 +1537,14 @@ function generateRectanglesPattern() {
 
   const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  drawImageData(data)
+  drawImageData(data);
 
   canvas.remove();
+
+  updateHistoryButtons();
 }
 
+// eslint-disable-next-line no-unused-vars
 function generateDiamondsPattern() {
   if (!interactive) {
     return;
@@ -1526,10 +1591,66 @@ function generateDiamondsPattern() {
 
   const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  drawImageData(data)
+  drawImageData(data);
 
   canvas.remove();
+
+  updateHistoryButtons();
 }
+
+// TODO
+/* function generateSpiralPattern() {
+  if (!interactive) {
+    return;
+  }
+
+  stopGrowth();
+  storeBrushHistory();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = CANVAS_WIDTH;
+  canvas.height = CANVAS_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = 'black';
+  ctx.shadowColor = ctx.strokeStyle;
+  ctx.shadowBlur = 2;
+
+  const widthRange = Math.min(canvas.width, canvas.height) * 4;
+  const minWidth = widthRange * 0.05;
+  const numSpirals = Math.floor(Math.random() * 19) + 6;
+
+  for (let i = 0; i < numSquares; i++) {
+    const x = Math.floor(Math.random() * canvas.width * 2 - canvas.width);
+    const y = Math.floor(Math.random() * canvas.height * 2 - canvas.height);
+    const width = Math.round(Math.random() ** 2 * widthRange + minWidth);
+    const height = Math.random() < 0.5 ? width : Math.round(Math.random() ** 2 * widthRange + minWidth);
+    const thickness = Math.floor(Math.random() * 19 + 4);
+
+    ctx.beginPath();
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI * 0.25);
+    ctx.translate(-x, -y);
+
+    ctx.rect(x, y, width, height);
+    ctx.lineWidth = thickness;
+
+    for (let i = 0; i < BRUSH_STROKE_REPEATS; i++) {
+      ctx.stroke();
+    }
+
+    ctx.translate(x, y);
+    ctx.rotate(-Math.PI * 0.25);
+    ctx.translate(-x, -y);
+  }
+
+  const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  drawImageData(data);
+
+  canvas.remove();
+
+  updateHistoryButtons();
+} */
 
 function imageTo2DArray(image) {
   stopGrowth();
@@ -1566,6 +1687,8 @@ function imageTo2DArray(image) {
 
   drawImageData(data, true);
 
+  canvas.remove();
+
   updateHistoryButtons();
 }
 
@@ -1583,7 +1706,7 @@ function drawImageData(data, ensureOutline = false) {
       const b = data[index + 2];
       let a = data[index + 3] / 255;
 
-      let {h, s, l} = rgb2hsl(r, g, b);
+      let {/* h, s,  */l} = rgb2hsl(r, g, b);
 
       // if (a > 0.2 && l < 0.5) {
       //   const pixel = {x: i, y: j, h: 0, s: 0, l: 0};
@@ -1607,6 +1730,7 @@ function drawImageData(data, ensureOutline = false) {
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 function init() {
   CANVAS_WIDTH = window.screen.width;
   CANVAS_HEIGHT = window.screen.height;
@@ -1628,7 +1752,6 @@ function init() {
   fillPixelGridHistory.unshift(Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT})));
   fillCanvasHistory.unshift(fillCanvas);
 
-  // TODO - this would need a separate canvas wrapper and separate history, combined somehow for undos/redos...
   const brushCanvas = document.createElement("canvas");
   brushCanvas.classList.add("brush-canvas");
   brushCanvas.width = CANVAS_WIDTH;
@@ -1668,6 +1791,8 @@ function init() {
   --canvas-scale: 0.5;
   --canvas-offset-x: 0px;
   --canvas-offset-y: 50px;
+  --mouse-x: -1000px;
+  --mouse-y: -1000px;
   accent-color: var(--selected-fill-color);
   font-size: 100%;
 
@@ -1699,6 +1824,41 @@ body, #canvasWrapper {
   &.positioning {
     cursor: grabbing;
   }
+
+  .guide {
+    position: absolute;
+    background: black;
+    opacity: 0.1;
+
+    &.vertical {
+      transform: translateX(var(--canvas-offset-x));
+      top: 0;
+      bottom: 0;
+      width: 2px;
+    }
+
+    &.horizontal {
+      transform: translateY(var(--canvas-offset-y));
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    &.cursor {
+      background-color: #0000ff;
+      opacity: 0.1;
+      top: -1px;
+      left: -1px;
+
+      &.vertical {
+        transform: translateX(var(--mouse-x));
+      }
+
+      &.horizontal {
+        transform: translateY(var(--mouse-y));
+      }
+    }
+  }
 }
 
 canvas {
@@ -1711,7 +1871,9 @@ canvas {
   z-index: 0;
 
   &#background-canvas {
+    border: 1px solid rgba(0, 0, 0, 0.3);
     background: white url('images/45degree_fabric.webp');
+    background-clip: content-box;
     box-shadow: 0 5px 20px 10px rgba(0, 0, 0, 0.2);
   }
 
@@ -1779,7 +1941,7 @@ canvas {
   label:not(:has(input[type="range"])) {
     cursor: pointer;
 
-    &:has(:checked:not([type="checkbox"])) {
+    &:not(#toggle-collapse):has(:checked) {
       background-color: black;
       border-color: white;
     }
@@ -1823,6 +1985,12 @@ canvas {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+  }
+
+  input:not([type="text"]) {
+    &:not(:disabled) {
+      cursor: pointer;
+    }
   }
 
   button {
@@ -1876,6 +2044,11 @@ canvas {
         </div>
 
         <div class="collapsible">
+          <label id="toggle-guidelines" aria-label="Toggle Guidelines" title="Toggle Guidelines">
+            🎯
+            <input type="checkbox" onchange="toggleGuidelines(event)" />
+          </label>
+
           <label>
             Canvas Scale
             <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
@@ -1904,7 +2077,7 @@ canvas {
       <div>
         <label>
           Brush Size
-          <input type="range" name="brushSize" min="5" max="50" value="15" step="1"
+          <input type="range" name="brushSize" min="5" max="100" value="15" step="1"
               oninput="onRangeValueChange(event, 'brushSizeValue', false)" />
           <span id="brushSizeValue">15</span>
         </label>
@@ -1981,6 +2154,10 @@ canvas {
     onwheel="onCanvasScroll(event)"
     oncontextmenu="onContextMenu(event)"
   >
+    <div class="guide vertical center hidden"></div>
+    <div class="guide horizontal center hidden"></div>
+    <div class="guide vertical cursor hidden"></div>
+    <div class="guide horizontal cursor hidden"></div>
   </div>
 </body>
 </html>
