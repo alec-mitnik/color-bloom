@@ -2009,6 +2009,11 @@ canvas {
       cursor: default;
     }
   }
+
+  button, input {
+    /* Prevent double-tap from zooming in on mobile */
+    touch-action: manipulation;
+  }
 }
 
 .hidden {
