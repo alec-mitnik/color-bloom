@@ -14,10 +14,12 @@
  * - Support min/max thickness settings for generated patterns
  * - Support custom canvas sizes
  * - Support uploading own images as templates
- * - Add share option (possible with image?)
+ * - Unify undo/redo for brush and fill
+ * - Dragging canvas position is laggy when you have full history
+ * - Finish fill brush support, add for touch events, and figure out cancel command
  * - Add tip button
  * - Use putImageData for batch rendering?  Allow configurable or even instant rendering?
- * - Consider using pointer events instead of separate mouse and touch events
+ * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
  */
 
 let CANVAS_WIDTH = 1920;
@@ -722,7 +724,7 @@ function storeBrushHistory() {
 }
 
 // eslint-disable-next-line no-unused-vars
-function downloadAsImage() {
+async function shareOrDownload() {
   if (!interactive) {
     return;
   }
@@ -730,10 +732,38 @@ function downloadAsImage() {
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
-  const ctx = canvas.getContext('2d');
 
+  const ctx = canvas.getContext('2d');
   ctx.drawImage(getFillCanvas(), 0, 0, canvas.width, canvas.height);
   ctx.drawImage(getBrushCanvas(), 0, 0, canvas.width, canvas.height);
+
+  try {
+    // Check if sharing is supported
+    if (navigator.share && navigator.canShare) {
+      const blob = await new Promise(resolve => {
+        canvas.toBlob(resolve, 'image/webp');
+      });
+
+      const file = new File([blob], 'color-bloom-wallpaper.webp', { type: 'image/webp' });
+
+      const shareData = {
+        title: 'Color Bloom',
+        text: 'I got inspired and made some art!',
+        files: [file],
+        url: '/art.html',
+      };
+
+      // Check if we can share files
+      if (navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+
+        canvas.remove();
+        return; // Exit if sharing successful
+      }
+    }
+  } catch (error) {
+    console.error('Error sharing canvas image:', error);
+  }
 
   const link = document.createElement('a');
   link.download = 'color-bloom-wallpaper';
@@ -1083,6 +1113,9 @@ function onCanvasClick(event) {
   handleClick(event.x, event.y);
 }
 
+// const FILL_BRUSH_THROTTLE = 5;
+// let fillBrushCounter = FILL_BRUSH_THROTTLE - 1;
+
 function onCanvasMouseMove(event) {
   setCssVar('--mouse-x', `${event.clientX}px`);
   setCssVar('--mouse-y', `${event.clientY}px`);
@@ -1100,8 +1133,11 @@ function onCanvasMouseMove(event) {
         let {x, y} = getCanvasCoordinates(event.x, event.y);
         addBrushstroke(x, y);
       }
-    } else if (selectedTool === "fill") { // TODO - space them out more
-      handleClick(event.clientX, event.clientY);
+    } else if (selectedTool === "fill") {
+      // if (++fillBrushCounter % FILL_BRUSH_THROTTLE === 0) {
+      //   fillBrushCounter = 0;
+        handleClick(event.clientX, event.clientY);
+      // }
     }
   } else if (event.buttons !== 1 && document.getElementById("canvasWrapper").classList.contains("positioning")) {
     const offsetLimitX = window.innerWidth * 0.6;
@@ -1278,15 +1314,14 @@ async function finishDrawing() {
       canvasContext.lineTo(allBrushstrokePoints[allBrushstrokePoints.length - 1].x, allBrushstrokePoints[allBrushstrokePoints.length - 1].y);
       canvasContext.stroke();
 
-      console.log("Syncing...");
+      // console.log("Syncing...");
       await syncPixelGridToBrushCanvas();
-      console.log("Sync done");
+      // console.log("Sync done");
       resumeInteraction();
 
       allBrushstrokePoints = [];
     }
 
-    // TODO - smoothing makes the current approximation unreliable
     if (!brushPixelsChanged) {
       undoBrush(false);
     }
@@ -2060,7 +2095,7 @@ canvas {
             <span id="canvasScaleValue">50%</span>
           </label>
 
-          <button id="downloadAsImageButton" type="button" aria-label="Download as Image" title="Download as Image" onclick="downloadAsImage()">📥</button>
+          <button id="shareOrDownloadButton" type="button" aria-label="Share or Download Image" title="Share or Download Image" onclick="shareOrDownload()">📥</button>
         </div>
 
         <div>
