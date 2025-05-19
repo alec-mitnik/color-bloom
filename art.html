@@ -14,7 +14,7 @@
  * - Support min/max thickness settings for generated patterns
  * - Support custom canvas sizes
  * - Support uploading own images as templates
- * - Unify undo/redo for brush and fill
+ * - Unify undo/redo for brush and fill, and overhaul state/history management
  * - Add tip button
  * - Use putImageData for batch rendering?  Doesn't seem to help performance much...
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
@@ -46,6 +46,7 @@ let growthActive = false;
 let erasingOutlineForMousePress;
 let interactive = true;
 let isDrawing = false;
+let isFilling = false;
 let allBrushstrokePoints = [];
 let previousBrushstrokePoints = [];
 let brushPixelsChanged = false;
@@ -165,7 +166,7 @@ function randIndex(arr, forSplice = false) {
   return Math.floor(Math.random() * (arr.length + (forSplice ? 1 : 0)));
 }
 
-function randEl(arr) {
+/* function randEl(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -175,7 +176,7 @@ function removeEl(arr, el) {
 
 function pluckRandEl(arr) {
   return removeEl(arr, randEl(arr));
-}
+} */
 
 function getToolbarData() {
   const form = document.getElementById("toolbar");
@@ -521,11 +522,13 @@ function mutateHue(h) {
 }
 
 function mutateSaturation(s) {
-  return Math.max(Math.min((Math.random() * (SATURATION_MUTATION * 2)) - SATURATION_MUTATION + s, 1), 0);
+  const actualMutation = SATURATION_MUTATION * 0.05;
+  return Math.max(Math.min((Math.random() * (actualMutation * 2)) - actualMutation + s, 1), 0);
 }
 
 function mutateLightness(l, s) {
-  const newValue = (Math.random() * (LIGHTNESS_MUTATION * 2)) - LIGHTNESS_MUTATION + l;
+  const actualMutation = LIGHTNESS_MUTATION * 0.05;
+  const newValue = (Math.random() * (actualMutation * 2)) - actualMutation + l;
 
   // Use max lightness value when starting lightness is 0.5 and saturation is 1,
   // and let max lightness go to 1 as these values go to 0/1 and 0 respectively
@@ -603,8 +606,6 @@ async function grow(x, y, erase = false, erasingOutline = false) {
   if (!growthActive) {
     brushPixelsChanged = false;
     fillPixelsChanged = false;
-    storeFillHistory();
-    storeBrushHistory();
 
     if (erase === false) {
       addStartingPixel(x, y);
@@ -1134,7 +1135,7 @@ function handleClick(clickX, clickY, fromMove = false) {
         }
 
         grow(x, y);
-      } else if (!fromMove) {
+      } else if (!fromMove && !isFilling) {
         stopGrowth();
       }
     } else if (selectedTool === "unfill") {
@@ -1144,7 +1145,7 @@ function handleClick(clickX, clickY, fromMove = false) {
 
       if (getFillPixelGrid()[x][y]?.a || getBrushPixelGrid()[x][y]?.a) {
         grow(x, y, true, erasingOutlineForMousePress);
-      } else if (!fromMove) {
+      } else if (!fromMove && !isFilling) {
         stopGrowth();
       }
     }
@@ -1201,10 +1202,12 @@ function onCanvasMouseMove(event) {
         let {x, y} = getCanvasCoordinates(event.x, event.y);
         addBrushstroke(x, y);
       }
-    } else if (selectedTool === "fill" || selectedTool === "unfill") {
+    } else if (isFilling) {
       // if (growthActive) {
         // if (++fillBrushCounter % FILL_BRUSH_THROTTLE === 0) {
         //   fillBrushCounter = 0;
+          clearTimeout(clickTimeoutId);
+          clickTimeoutId = null;
           handleClick(event.clientX, event.clientY, true);
         // }
       // }
@@ -1269,7 +1272,9 @@ function onCanvasTouchMove(event) {
         let {x, y} = getCanvasCoordinates(event.touches[0].clientX, event.touches[0].clientY);
         addBrushstroke(x, y);
       }
-    } else if (selectedTool === "fill" || selectedTool === "unfill") {
+    } else if (isFilling) {
+      clearTimeout(clickTimeoutId);
+      clickTimeoutId = null;
       handleClick(event.touches[0].clientX, event.touches[0].clientY, true);
     }
   }
@@ -1320,16 +1325,19 @@ function onCanvasMouseDown(event) {
       stopGrowth();
       storeBrushHistory();
       brushPixelsChanged = false;
-
       isDrawing = true;
-      const canvas = getBrushCanvas();
-      const context = canvas.getContext("2d");
-      context.beginPath();
       addBrushstroke(x, y);
     } else {
       if (!(x >= 0 && x < CANVAS_WIDTH
           && y >= 0 && y < CANVAS_HEIGHT)) {
         stopGrowth();
+      } else {
+        if (!growthActive) {
+          // In case of erasing outline
+          storeBrushHistory();
+          storeFillHistory();
+          isFilling = true;
+        }
       }
     }
   } else {
@@ -1446,8 +1454,6 @@ function resumeInteraction() {
 }
 
 function onCanvasMouseUp(event) {
-  finishDrawing();
-
   setCssVar('--toolbar-pointer-events', 'all');
   document.getElementById("contentWrapper").classList.remove("positioning");
 
@@ -1456,7 +1462,8 @@ function onCanvasMouseUp(event) {
 
   // event.button is 0 for the primary button (left click)
   if (event.button === 0) {
-    erasingOutlineForMousePress = null;
+    finishDrawing();
+    stopFilling();
 
     if (interactive && clickTimeoutId) {
       clearTimeout(clickTimeoutId);
@@ -1501,16 +1508,23 @@ function onCanvasTouchStart(event) {
       storeBrushHistory();
       brushPixelsChanged = false;
       isDrawing = true;
-
       addBrushstroke(x, y);
     } else {
       if (!(x >= 0 && x < CANVAS_WIDTH
           && y >= 0 && y < CANVAS_HEIGHT)) {
         stopGrowth();
+      } else {
+        if (!growthActive) {
+          // In case of erasing outline
+          storeBrushHistory();
+          storeFillHistory();
+          isFilling = true;
+        }
       }
     }
   } else {
     finishDrawing();
+    stopFilling();
     document.getElementById("contentWrapper").classList.add("positioning");
   }
 
@@ -1529,12 +1543,11 @@ function onCanvasTouchEnd(event) {
 
     if (event.touches.length === 0) {
       finishDrawing();
+      stopFilling();
       setCssVar('--toolbar-pointer-events', 'all');
 
       const toolbar = document.getElementById("toolbar");
       setTimeout(() => toolbar.classList.remove("hidden"), 50);
-
-      erasingOutlineForMousePress = null;
 
       if (interactive && clickTimeoutId) {
         clearTimeout(clickTimeoutId);
@@ -1549,6 +1562,7 @@ function onCanvasMouseEnter(event) {
   // event.buttons is 1 for the primary button (left click)
   if (!interactive || event.buttons !== 1) {
     finishDrawing();
+    stopFilling();
     setCssVar('--toolbar-pointer-events', 'all');
   }
 
@@ -1578,7 +1592,8 @@ function onCanvasScroll(event) {
 
 function onContextMenu(event) {
   event.preventDefault();
-  isDrawing = false;
+  finishDrawing();
+  stopFilling();
 }
 
 function stopGrowth() {
@@ -1586,16 +1601,40 @@ function stopGrowth() {
     growthActive = false;
     branches = [];
 
-    if (!fillPixelsChanged) {
-      undoFill(false);
+    if (!isFilling) {
+      if (!fillPixelsChanged) {
+        undoFill(false);
+      }
+
+      if (!brushPixelsChanged) {
+        undoBrush(false);
+      }
+
+      updateHistoryButtons(); // TODO
     }
 
-    if (!brushPixelsChanged) {
-      undoBrush(false);
-    }
-
-    updateHistoryButtons(); // TODO
     drawFillImageData(); // TODO
+  }
+}
+
+function stopFilling() {
+  if (isFilling) {
+    isFilling = false;
+
+    if (!growthActive) {
+      if (!fillPixelsChanged) {
+        undoFill(false);
+      }
+
+      if (erasingOutlineForMousePress && !brushPixelsChanged) {
+        undoBrush(false);
+      }
+
+      updateHistoryButtons(); // TODO
+      drawFillImageData(); // TODO
+    }
+
+    erasingOutlineForMousePress = null;
   }
 }
 
@@ -2314,21 +2353,21 @@ canvas {
       <div>
         <label>
           Hue Variance
-          <input type="range" name="hueMutation" min="0" max="1" step="0.1" value="0.5"
+          <input type="range" name="hueMutation" min="0" max="1" step="0.01" value="0.5"
               oninput="onRangeValueChange(event, 'hueMutationValue')" />
           <span id="hueMutationValue">50%</span>
         </label>
 
         <label>
           Saturation Variance
-          <input type="range" name="saturationMutation" min="0" max="0.05" value="0.005" step="0.005"
+          <input type="range" name="saturationMutation" min="0" max="1" step="0.01" value="0.1"
               oninput="onRangeValueChange(event, 'saturationMutationValue')" />
           <span id="saturationMutationValue">10%</span>
         </label>
 
         <label>
           Lightness Variance
-          <input type="range" name="valueMutation" min="0" max="0.05" value="0.025" step="0.005"
+          <input type="range" name="valueMutation" min="0" max="1" step="0.01" value="0.5"
               oninput="onRangeValueChange(event, 'lightnessMutationValue')" />
           <span id="lightnessMutationValue">50%</span>
         </label>
