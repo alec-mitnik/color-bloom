@@ -658,7 +658,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
  * @param {string} [options.src] - The URL of the image to bloom.
  * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
  * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
- * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already.  For convenience.
+ * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already, and also retriggers when restored from cache (like when closing and reopening the iOS Safari app).
  * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
  * @param {boolean} [options.confineToSpawningElement] - If true, the bloom canvas will be contained within the of the spawning element, and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
  */
@@ -775,11 +775,19 @@ export async function bloomImage({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      // If body not yet loaded, wait for the onload trigger
-      if (document.readyState !== "complete") {
-        document.body.onload = () => {
+      window.addEventListener('pageshow', (event) => {
+        // event.persisted is true if the page was restored from cache, false for initial page load
+        if (event.persisted) {
           bloomImage(...arguments);
         }
+      });
+
+      if (document.readyState === "interactive") {
+        // If document not yet loaded, wait for the onload trigger
+        // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
+        window.addEventListener('DOMContentLoaded', () => {
+          bloomImage(...arguments);
+        });
 
         return;
       }
@@ -856,7 +864,7 @@ export async function bloomImage({
  * @param {number} [options.lightnessVariance=0.5] - The amount to mutate the lightness by, as a value from 0 to 1.  Defaults to 0.5.
  * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
  * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
- * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already.  For convenience.
+ * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already, and also retriggers when restored from cache (like when closing and reopening the iOS Safari app).
  * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
  * @param {boolean} [options.confineToSpawningElement] - If true, the bloom canvas will be contained within the of the spawning element, and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
  */
@@ -985,11 +993,19 @@ export function bloomColor({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      // If body not yet loaded, wait for the onload trigger
-      if (document.readyState !== "complete") {
-        document.body.onload = () => {
+      window.addEventListener('pageshow', (event) => {
+        // event.persisted is true if the page was restored from cache, false for initial page load
+        if (event.persisted) {
           bloomColor(...arguments);
         }
+      });
+
+      if (document.readyState === "interactive") {
+        // If document not yet loaded, wait for the onload trigger
+        // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
+        window.addEventListener('DOMContentLoaded', () => {
+          bloomColor(...arguments);
+        });
 
         return;
       }
