@@ -1336,8 +1336,9 @@ function onCanvasMouseDown(event) {
           // In case of erasing outline
           storeBrushHistory();
           storeFillHistory();
-          isFilling = true;
         }
+
+        isFilling = true;
       }
     }
   } else {
@@ -1518,8 +1519,9 @@ function onCanvasTouchStart(event) {
           // In case of erasing outline
           storeBrushHistory();
           storeFillHistory();
-          isFilling = true;
         }
+
+        isFilling = true;
       }
     }
   } else {
@@ -2295,7 +2297,7 @@ canvas {
         </div>
 
         <div>
-          <button type="button" aria-label="Reset" title="Reset" onclick="resetCanvas()">⬜</button>
+          <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()">⬜</button>
 
           <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled>↩️</button>
 
