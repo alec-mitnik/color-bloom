@@ -773,7 +773,7 @@ export async function bloomImage({
         setTimeout(() => bloomImage(...arguments), 50);
       }
     }, 50);
-    window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
+    // window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
       window.addEventListener('pageshow', (event) => {
@@ -781,7 +781,7 @@ export async function bloomImage({
         // event.persisted is supposed to be true if the page was restored from cache,
         // false for initial page load, but is always false on iOS...
         // if (event.persisted) {
-          bloomImage(...arguments);
+          setTimeout(() => bloomImage(...arguments), 500);
         // }
       });
 
