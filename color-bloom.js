@@ -678,7 +678,6 @@ export async function bloomImage({
   retriggerOnScreenSizeChange = false,
   confineToSpawningElement = false,
 } = {}) {
-  console.log("Image bloom", src);
   const {x, y, width, height} = spawningElement.getBoundingClientRect();
 
   if (blooms.has(spawningElement)) {
@@ -773,23 +772,25 @@ export async function bloomImage({
         setTimeout(() => bloomImage(...arguments), 50);
       }
     }, 50);
-    // window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
+    window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      window.addEventListener('pageshow', (event) => {
-        console.log("Image pageshow", event.persisted);
+      window.addEventListener('pageshow', () => {
         // event.persisted is supposed to be true if the page was restored from cache,
         // false for initial page load, but is always false on iOS...
-        // if (event.persisted) {
-          setTimeout(() => bloomImage(...arguments), 500);
-        // }
+
+        // Clear the pixel grid to force reloading the image
+        if (blooms.has(spawningElement)) {
+          delete blooms.get(spawningElement).pixelGrid;
+        }
+
+        bloomImage(...arguments);
       });
 
       if (document.readyState === "loading") {
         // If document not yet loaded, wait for the onload trigger
         // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
         window.addEventListener('DOMContentLoaded', () => {
-        console.log("Image load");
           bloomImage(...arguments);
         });
 
@@ -1000,9 +1001,7 @@ export function bloomColor({
       window.addEventListener('pageshow', () => {
         // event.persisted is supposed to be true if the page was restored from cache,
         // false for initial page load, but is always false on iOS...
-        // if (event.persisted) {
-          bloomColor(...arguments);
-        // }
+        bloomColor(...arguments);
       });
 
       if (document.readyState === "loading") {
