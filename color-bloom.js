@@ -678,6 +678,7 @@ export async function bloomImage({
   retriggerOnScreenSizeChange = false,
   confineToSpawningElement = false,
 } = {}) {
+  console.log("Image bloom", src);
   const {x, y, width, height} = spawningElement.getBoundingClientRect();
 
   if (blooms.has(spawningElement)) {
@@ -775,7 +776,8 @@ export async function bloomImage({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      window.addEventListener('pageshow', () => {
+      window.addEventListener('pageshow', (event) => {
+        console.log("Image pageshow", event.persisted);
         // event.persisted is supposed to be true if the page was restored from cache,
         // false for initial page load, but is always false on iOS...
         // if (event.persisted) {
@@ -787,6 +789,7 @@ export async function bloomImage({
         // If document not yet loaded, wait for the onload trigger
         // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
         window.addEventListener('DOMContentLoaded', () => {
+        console.log("Image load");
           bloomImage(...arguments);
         });
 
