@@ -696,7 +696,7 @@ export async function bloomImage({
     blooms.set(spawningElement, {branches: []});
   }
 
-  console.log("rect canvas height is", height);
+  console.log("rect spawning element height is", height);
 
   if (confineToSpawningElement) {
     widthOverride = widthOverride || width;
@@ -704,9 +704,10 @@ export async function bloomImage({
   }
 
   let canvas = getCanvas(spawningElement);
+  console.log("canvas exists is", !!canvas, canvas?.width, canvas?.height);
 
-  if (!canvas) {
-    canvas = document.createElement("canvas");
+  if (!canvas || !canvas.width || !canvas.height) {
+    canvas = canvas ?? document.createElement("canvas");
     canvas.width = window.screen.width;
     canvas.height = window.screen.height;
 
