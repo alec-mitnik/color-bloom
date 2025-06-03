@@ -781,7 +781,7 @@ export async function bloomImage({
           // false for initial page load, but is always false on iOS...
 
           if (blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel)) {
-            // Clear the empty canvas data to force reloading the image
+            // If canvas data was not restored, just clear it, to ensure the image gets reloaded
             clearCanvas(spawningElement);
             bloomImage(...arguments);
           }
@@ -799,6 +799,10 @@ export async function bloomImage({
         return;
       }
     }
+  } else if (!canvas.width || !canvas.height) {
+    // Fix iOS Safari restoration bug where canvas height becomes 0
+    canvas.width = confineToSpawningElement ? width : window.screen.width;
+    canvas.height = confineToSpawningElement ? height : window.screen.height;
   }
 
   const spawningElementIsBody = spawningElement === document.body;
@@ -1000,11 +1004,19 @@ export function bloomColor({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      window.addEventListener('pageshow', () => {
-        // event.persisted is supposed to be true if the page was restored from cache,
-        // false for initial page load, but is always false on iOS...
-        bloomColor(...arguments);
-      });
+      if (!blooms.get(spawningElement).pageshowListener) {
+        blooms.get(spawningElement).pageshowListener = () => {
+          // event.persisted is supposed to be true if the page was restored from cache,
+          // false for initial page load, but is always false on iOS...
+
+          if (blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel)) {
+            // If canvas data was not restored, just clear it
+            clearCanvas(spawningElement);
+            bloomColor(...arguments);
+          }
+        };
+      }
+      window.addEventListener('pageshow', blooms.get(spawningElement).pageshowListener);
 
       if (document.readyState === "loading") {
         // If document not yet loaded, wait for the onload trigger
