@@ -678,6 +678,7 @@ export async function bloomImage({
   retriggerOnScreenSizeChange = false,
   confineToSpawningElement = false,
 } = {}) {
+  console.log("bloomImage called with src:", src, "triggerOnLoad:", triggerOnLoad, "readyState:", document.readyState);
   const {x, y, width, height} = spawningElement.getBoundingClientRect();
 
   if (blooms.has(spawningElement)) {
@@ -775,19 +776,25 @@ export async function bloomImage({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      window.addEventListener('pageshow', () => {
-        // event.persisted is supposed to be true if the page was restored from cache,
-        // false for initial page load, but is always false on iOS...
+      if (!blooms.get(spawningElement).pageshowListener) {
+        console.log("Adding pageshow listener", spawningElement);
+        blooms.get(spawningElement).pageshowListener = (event) => {
+          // event.persisted is supposed to be true if the page was restored from cache,
+          // false for initial page load, but is always false on iOS...
 
-        // Clear the canvas to force reloading the image
-        clearCanvas(spawningElement);
-        bloomImage(...arguments);
-      });
+          // Clear the canvas to force reloading the image
+          clearCanvas(spawningElement);
+          console.log("Image pageshow fired", event.persisted, "for src:", src);
+          bloomImage(...arguments);
+        };
+      }
+      window.addEventListener('pageshow', blooms.get(spawningElement).pageshowListener);
 
       if (document.readyState === "loading") {
         // If document not yet loaded, wait for the onload trigger
         // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
         window.addEventListener('DOMContentLoaded', () => {
+          console.log("Image DOMContentLoaded");
           bloomImage(...arguments);
         });
 
@@ -834,6 +841,7 @@ export async function bloomImage({
     }
   }
 
+  console.log("About to check pixelGrid for src:", src, "exists:", !!blooms.get(spawningElement).pixelGrid);
   if (!blooms.get(spawningElement).pixelGrid) {
     const loadedImage = await loadImage(src);
 
