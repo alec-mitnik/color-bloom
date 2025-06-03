@@ -332,28 +332,25 @@ async function erase(spawningElement, x, y, maxRadius, speed) {
 }
 
 async function growImage(spawningElement, x, y, maxRadius, speed) {
-  console.log("Grow image A");
   const {branches, pixelGrid} = blooms.get(spawningElement);
 
   if (x < 0 || y < 0 || x >= pixelGrid.length || y >= pixelGrid[0].length) {
-    console.log("Grow image B");
     return;
   }
 
   if (!pixelGrid[x][y] || !pixelGrid[x][y].imageDataToBeShown) {
-    console.log("Grow image C");
     return;
   }
 
   const {h, s, l} = pixelGrid[x][y];
   const branch = [];
   branches.push(branch);
-console.log("Grow image D");
+
   addPixel(spawningElement, branch, x, y, h, s, l);
 
   const delayThreshold = isNaN(speed) ? 1000 : Math.round(999 * Math.max(Math.min(speed ** 2, 1), 0) + 1);
   let growths = 1;
-console.log("Grow image E");
+
   while (branch.length) {
     growImageBranch(spawningElement, branch, x, y, maxRadius);
 
@@ -363,7 +360,6 @@ console.log("Grow image E");
 
     growths++;
   }
-  console.log("Grow image F");
 }
 
 async function grow(spawningElement, x, y, h, s, l, hueVariance, saturationVariance, lightnessVariance, maxRadius, speed) {
@@ -604,18 +600,15 @@ function loadImage(src) {
   });
 }
 
-function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth, canvasHeight, bloomX, bloomY, imageX, imageY) {
+function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth, canvasHeight, imageX, imageY) {
   if (!loadedImage) {
-    console.log("Image to map to array is falsy");
     return null;
   }
 
-  console.log("Loaded image dimensions are", loadedImage.width, loadedImage.height, "overrides are", widthOverride, heightOverride);
   const canvas = document.createElement('canvas');
   canvas.width = widthOverride || loadedImage.width;
   canvas.height = heightOverride || loadedImage.height;
   const ctx = canvas.getContext('2d');
-  console.log("Canvas dimensions are", canvas.width, canvas.height, "provided canvas dimensions are", canvasWidth, canvasHeight);
 
   ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
   const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -685,7 +678,6 @@ export async function bloomImage({
   retriggerOnScreenSizeChange = false,
   confineToSpawningElement = false,
 } = {}) {
-  console.log("bloomImage called with src:", src, "triggerOnLoad:", triggerOnLoad, "readyState:", document.readyState);
   const {x, y, width, height} = spawningElement.getBoundingClientRect();
 
   if (blooms.has(spawningElement)) {
@@ -696,30 +688,23 @@ export async function bloomImage({
     blooms.set(spawningElement, {branches: []});
   }
 
-  console.log("rect spawning element height is", height);
-
   if (confineToSpawningElement) {
     widthOverride = widthOverride || width;
     heightOverride = heightOverride || height;
   }
 
   let canvas = getCanvas(spawningElement);
-  console.log("canvas exists is", !!canvas, canvas?.width, canvas?.height);
 
-  if (!canvas || !canvas.width || !canvas.height) {
-    canvas = canvas ?? document.createElement("canvas");
+  if (!canvas) {
+    canvas = document.createElement("canvas");
     canvas.width = window.screen.width;
     canvas.height = window.screen.height;
-
-    console.log("canvas height set to window height is", canvas.height, "with window height as", window.screen.height);
     canvas.style.pointerEvents = "none";
     canvas.style.position = "absolute";
 
     if (confineToSpawningElement) {
       canvas.width = width;
       canvas.height = height;
-
-      console.log("canvas height set to rect height is then", canvas.height, "with rect height as", height);
     }
 
     blooms.get(spawningElement).canvas = canvas;
@@ -787,20 +772,18 @@ export async function bloomImage({
         setTimeout(() => bloomImage(...arguments), 50);
       }
     }, 50);
-    // window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
+    window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
       if (!blooms.get(spawningElement).pageshowListener) {
-        console.log("Adding pageshow listener", spawningElement);
-        blooms.get(spawningElement).pageshowListener = (event) => {
-          console.log("Image pageshow fired", event.persisted, "for src:", src);
+        blooms.get(spawningElement).pageshowListener = () => {
           // event.persisted is supposed to be true if the page was restored from cache,
           // false for initial page load, but is always false on iOS...
-          console.log("Before clearing canvas, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel));
+
           if (blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel)) {
-            // Clear the empty canvas to force reloading the image
+            // Clear the empty canvas data to force reloading the image
             clearCanvas(spawningElement);
-            setTimeout(() => bloomImage(...arguments), 500);
+            bloomImage(...arguments);
           }
         };
       }
@@ -810,7 +793,6 @@ export async function bloomImage({
         // If document not yet loaded, wait for the onload trigger
         // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
         window.addEventListener('DOMContentLoaded', () => {
-          console.log("Image DOMContentLoaded");
           bloomImage(...arguments);
         });
 
@@ -857,20 +839,15 @@ export async function bloomImage({
     }
   }
 
-  console.log("About to check pixelGrid for src:", src, "exists:", !!blooms.get(spawningElement).pixelGrid);
   if (!blooms.get(spawningElement).pixelGrid) {
-    console.log("pixelGrid does not exist");
     const loadedImage = await loadImage(src);
-    console.log("Image load result:", !!loadedImage, "for src:", src);
 
     if (!loadedImage) {
       return;
     }
 
     blooms.get(spawningElement).pixelGrid =
-        imageTo2dArray(loadedImage, widthOverride, heightOverride, canvas.width, canvas.height, bloomX, bloomY, imageX, imageY);
-    console.log("Image processing complete, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid?.flat().every(pixel => !pixel));
-    console.log("Pixel grid falsy is", !blooms.get(spawningElement)?.pixelGrid);
+        imageTo2dArray(loadedImage, widthOverride, heightOverride, canvas.width, canvas.height, imageX, imageY);
   }
 
   blooms.get(spawningElement).isErasing = false;
@@ -1039,6 +1016,10 @@ export function bloomColor({
         return;
       }
     }
+  } else if (!canvas.width || !canvas.height) {
+    // Fix iOS Safari restoration bug where canvas height becomes 0
+    canvas.width = confineToSpawningElement ? width : window.screen.width;
+    canvas.height = confineToSpawningElement ? height : window.screen.height;
   }
 
   if (!blooms.get(spawningElement).pixelGrid) {
