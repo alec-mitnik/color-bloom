@@ -776,6 +776,7 @@ export async function bloomImage({
 
     if (triggerOnLoad) {
       window.addEventListener('pageshow', (event) => {
+        console.log("Image pageshow", event.persisted);
         // event.persisted is true if the page was restored from cache, false for initial page load
         if (event.persisted) {
           bloomImage(...arguments);
@@ -994,6 +995,7 @@ export function bloomColor({
 
     if (triggerOnLoad) {
       window.addEventListener('pageshow', (event) => {
+        console.log("Color pageshow", event.persisted);
         // event.persisted is true if the page was restored from cache, false for initial page load
         if (event.persisted) {
           bloomColor(...arguments);
