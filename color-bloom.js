@@ -779,11 +779,8 @@ export async function bloomImage({
         // event.persisted is supposed to be true if the page was restored from cache,
         // false for initial page load, but is always false on iOS...
 
-        // Clear the pixel grid to force reloading the image
-        if (blooms.has(spawningElement)) {
-          delete blooms.get(spawningElement).pixelGrid;
-        }
-
+        // Clear the canvas to force reloading the image
+        clearCanvas(spawningElement);
         bloomImage(...arguments);
       });
 
