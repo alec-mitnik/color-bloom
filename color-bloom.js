@@ -332,25 +332,28 @@ async function erase(spawningElement, x, y, maxRadius, speed) {
 }
 
 async function growImage(spawningElement, x, y, maxRadius, speed) {
+  console.log("Grow image A");
   const {branches, pixelGrid} = blooms.get(spawningElement);
 
   if (x < 0 || y < 0 || x >= pixelGrid.length || y >= pixelGrid[0].length) {
+    console.log("Grow image B");
     return;
   }
 
   if (!pixelGrid[x][y] || !pixelGrid[x][y].imageDataToBeShown) {
+    console.log("Grow image C");
     return;
   }
 
   const {h, s, l} = pixelGrid[x][y];
   const branch = [];
   branches.push(branch);
-
+console.log("Grow image D");
   addPixel(spawningElement, branch, x, y, h, s, l);
 
   const delayThreshold = isNaN(speed) ? 1000 : Math.round(999 * Math.max(Math.min(speed ** 2, 1), 0) + 1);
   let growths = 1;
-
+console.log("Grow image E");
   while (branch.length) {
     growImageBranch(spawningElement, branch, x, y, maxRadius);
 
@@ -360,6 +363,7 @@ async function growImage(spawningElement, x, y, maxRadius, speed) {
 
     growths++;
   }
+  console.log("Grow image F");
 }
 
 async function grow(spawningElement, x, y, h, s, l, hueVariance, saturationVariance, lightnessVariance, maxRadius, speed) {
@@ -773,7 +777,7 @@ export async function bloomImage({
         setTimeout(() => bloomImage(...arguments), 50);
       }
     }, 50);
-    window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
+    // window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
       if (!blooms.get(spawningElement).pageshowListener) {
@@ -781,9 +785,11 @@ export async function bloomImage({
         blooms.get(spawningElement).pageshowListener = (event) => {
           // event.persisted is supposed to be true if the page was restored from cache,
           // false for initial page load, but is always false on iOS...
-          console.log("Before clearing canvas, pixel grid is", blooms.get(spawningElement).pixelGrid);
-          // Clear the canvas to force reloading the image
-          clearCanvas(spawningElement);
+          console.log("Before clearing canvas, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel));
+          if (blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel)) {
+            // Clear the empty canvas to force reloading the image
+            clearCanvas(spawningElement);
+          }
           console.log("Image pageshow fired", event.persisted, "for src:", src);
           bloomImage(...arguments);
         };
@@ -843,6 +849,7 @@ export async function bloomImage({
 
   console.log("About to check pixelGrid for src:", src, "exists:", !!blooms.get(spawningElement).pixelGrid);
   if (!blooms.get(spawningElement).pixelGrid) {
+    console.log("pixelGrid does not exist");
     const loadedImage = await loadImage(src);
     console.log("Image load result:", !!loadedImage, "for src:", src);
 
@@ -852,7 +859,7 @@ export async function bloomImage({
 
     blooms.get(spawningElement).pixelGrid =
         imageTo2dArray(loadedImage, widthOverride, heightOverride, canvas.width, canvas.height, bloomX, bloomY, imageX, imageY);
-    console.log("Image processing complete for src:", src);
+    console.log("Image processing complete, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel));
   }
 
   blooms.get(spawningElement).isErasing = false;
