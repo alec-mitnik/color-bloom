@@ -776,14 +776,13 @@ export async function bloomImage({
 
     if (triggerOnLoad) {
       window.addEventListener('pageshow', (event) => {
-        console.log("Image pageshow", event.persisted);
         // event.persisted is true if the page was restored from cache, false for initial page load
         if (event.persisted) {
           bloomImage(...arguments);
         }
       });
 
-      if (document.readyState === "interactive") {
+      if (document.readyState === "loading") {
         // If document not yet loaded, wait for the onload trigger
         // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
         window.addEventListener('DOMContentLoaded', () => {
@@ -995,14 +994,13 @@ export function bloomColor({
 
     if (triggerOnLoad) {
       window.addEventListener('pageshow', (event) => {
-        console.log("Color pageshow", event.persisted);
         // event.persisted is true if the page was restored from cache, false for initial page load
         if (event.persisted) {
           bloomColor(...arguments);
         }
       });
 
-      if (document.readyState === "interactive") {
+      if (document.readyState === "loading") {
         // If document not yet loaded, wait for the onload trigger
         // (Can't just use pageshow, since it has no way to check if the initial trigger has already occurred)
         window.addEventListener('DOMContentLoaded', () => {
