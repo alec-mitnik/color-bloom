@@ -606,9 +606,11 @@ function loadImage(src) {
 
 function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth, canvasHeight, bloomX, bloomY, imageX, imageY) {
   if (!loadedImage) {
+    console.log("Image to map to array is falsy");
     return null;
   }
 
+  console.log("Loaded image dimensions are", loadedImage.width, loadedImage.height);
   const canvas = document.createElement('canvas');
   canvas.width = widthOverride || loadedImage.width;
   canvas.height = heightOverride || loadedImage.height;
@@ -783,15 +785,15 @@ export async function bloomImage({
       if (!blooms.get(spawningElement).pageshowListener) {
         console.log("Adding pageshow listener", spawningElement);
         blooms.get(spawningElement).pageshowListener = (event) => {
+          console.log("Image pageshow fired", event.persisted, "for src:", src);
           // event.persisted is supposed to be true if the page was restored from cache,
           // false for initial page load, but is always false on iOS...
           console.log("Before clearing canvas, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel));
           if (blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel)) {
             // Clear the empty canvas to force reloading the image
             clearCanvas(spawningElement);
+            bloomImage(...arguments);
           }
-          console.log("Image pageshow fired", event.persisted, "for src:", src);
-          bloomImage(...arguments);
         };
       }
       window.addEventListener('pageshow', blooms.get(spawningElement).pageshowListener);
@@ -859,7 +861,8 @@ export async function bloomImage({
 
     blooms.get(spawningElement).pixelGrid =
         imageTo2dArray(loadedImage, widthOverride, heightOverride, canvas.width, canvas.height, bloomX, bloomY, imageX, imageY);
-    console.log("Image processing complete, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel));
+    console.log("Image processing complete, pixel grid empty is", blooms.get(spawningElement)?.pixelGrid?.flat().every(pixel => !pixel));
+    console.log("Pixel grid falsy is", !blooms.get(spawningElement)?.pixelGrid);
   }
 
   blooms.get(spawningElement).isErasing = false;
