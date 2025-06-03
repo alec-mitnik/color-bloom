@@ -696,7 +696,7 @@ export async function bloomImage({
     blooms.set(spawningElement, {branches: []});
   }
 
-  console.log("rect canvas hight is", height);
+  console.log("rect canvas height is", height);
 
   if (confineToSpawningElement) {
     widthOverride = widthOverride || width;
@@ -709,12 +709,16 @@ export async function bloomImage({
     canvas = document.createElement("canvas");
     canvas.width = window.screen.width;
     canvas.height = window.screen.height;
+
+    console.log("canvas height set to window height is", canvas.height, "with window height as", window.screen.height);
     canvas.style.pointerEvents = "none";
     canvas.style.position = "absolute";
 
     if (confineToSpawningElement) {
       canvas.width = width;
       canvas.height = height;
+
+      console.log("canvas height set to rect height is then", canvas.height, "with rect height as", height);
     }
 
     blooms.get(spawningElement).canvas = canvas;
