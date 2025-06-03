@@ -610,11 +610,12 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
     return null;
   }
 
-  console.log("Loaded image dimensions are", loadedImage.width, loadedImage.height);
+  console.log("Loaded image dimensions are", loadedImage.width, loadedImage.height, "overrides are", widthOverride, heightOverride);
   const canvas = document.createElement('canvas');
   canvas.width = widthOverride || loadedImage.width;
   canvas.height = heightOverride || loadedImage.height;
   const ctx = canvas.getContext('2d');
+  console.log("Canvas dimensions are", canvas.width, canvas.height, "provided canvas dimensions are", canvasWidth, canvasHeight);
 
   ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
   const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
