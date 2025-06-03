@@ -781,7 +781,7 @@ export async function bloomImage({
         blooms.get(spawningElement).pageshowListener = (event) => {
           // event.persisted is supposed to be true if the page was restored from cache,
           // false for initial page load, but is always false on iOS...
-
+          console.log("Before clearing canvas, pixel grid is", blooms.get(spawningElement).pixelGrid);
           // Clear the canvas to force reloading the image
           clearCanvas(spawningElement);
           console.log("Image pageshow fired", event.persisted, "for src:", src);
@@ -844,6 +844,7 @@ export async function bloomImage({
   console.log("About to check pixelGrid for src:", src, "exists:", !!blooms.get(spawningElement).pixelGrid);
   if (!blooms.get(spawningElement).pixelGrid) {
     const loadedImage = await loadImage(src);
+    console.log("Image load result:", !!loadedImage, "for src:", src);
 
     if (!loadedImage) {
       return;
@@ -851,6 +852,7 @@ export async function bloomImage({
 
     blooms.get(spawningElement).pixelGrid =
         imageTo2dArray(loadedImage, widthOverride, heightOverride, canvas.width, canvas.height, bloomX, bloomY, imageX, imageY);
+    console.log("Image processing complete for src:", src);
   }
 
   blooms.get(spawningElement).isErasing = false;
