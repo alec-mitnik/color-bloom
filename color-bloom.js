@@ -775,11 +775,12 @@ export async function bloomImage({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      window.addEventListener('pageshow', (event) => {
-        // event.persisted is true if the page was restored from cache, false for initial page load
-        if (event.persisted) {
+      window.addEventListener('pageshow', () => {
+        // event.persisted is supposed to be true if the page was restored from cache,
+        // false for initial page load, but is always false on iOS...
+        // if (event.persisted) {
           bloomImage(...arguments);
-        }
+        // }
       });
 
       if (document.readyState === "loading") {
@@ -993,11 +994,12 @@ export function bloomColor({
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
-      window.addEventListener('pageshow', (event) => {
-        // event.persisted is true if the page was restored from cache, false for initial page load
-        if (event.persisted) {
+      window.addEventListener('pageshow', () => {
+        // event.persisted is supposed to be true if the page was restored from cache,
+        // false for initial page load, but is always false on iOS...
+        // if (event.persisted) {
           bloomColor(...arguments);
-        }
+        // }
       });
 
       if (document.readyState === "loading") {
