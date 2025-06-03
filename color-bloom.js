@@ -696,6 +696,8 @@ export async function bloomImage({
     blooms.set(spawningElement, {branches: []});
   }
 
+  console.log("rect canvas hight is", height);
+
   if (confineToSpawningElement) {
     widthOverride = widthOverride || width;
     heightOverride = heightOverride || height;
@@ -793,7 +795,7 @@ export async function bloomImage({
           if (blooms.get(spawningElement)?.pixelGrid.flat().every(pixel => !pixel)) {
             // Clear the empty canvas to force reloading the image
             clearCanvas(spawningElement);
-            bloomImage(...arguments);
+            setTimeout(() => bloomImage(...arguments), 500);
           }
         };
       }
