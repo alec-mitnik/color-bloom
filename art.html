@@ -54,10 +54,11 @@ let fillPixelsChanged = false;
 let canvasMoveScheduled = false;
 let storedMovementX = 0;
 let storedMovementY = 0;
-let storedScaleChange = 0;
+let storedScaleValue = NaN;
 let clickTimeoutId;
 const touches = new Map();
-let averageTouchDistance = NaN;
+let startingTouchDistance = NaN;
+let startingScaleValue = NaN;
 
 let HUE_MUTATION;
 
@@ -1227,9 +1228,9 @@ function onCanvasTouchMove(event) {
   // const newTouch = new Touch({identifier: Date.now(), clientX: 100, clientY: 100, target: contentWrapper});
   // eventTouches.push(newTouch);
 
-  const draggingCanvas = eventTouches.length !== 1
+  const draggingCanvas = eventTouches.length > 1
       && document.getElementById("contentWrapper").classList.contains("positioning")
-  const shouldDrag = draggingCanvas && interactive;
+  const shouldDrag = draggingCanvas; // && interactive;
 
   let netMovementX = 0, netMovementY = 0, totalDistance = 0, pairCount = 0;
 
@@ -1242,6 +1243,10 @@ function onCanvasTouchMove(event) {
 
       if (shouldDrag) {
         for (const otherTouch of eventTouches) {
+          if (touch.identifier === otherTouch.identifier) {
+            continue;
+          }
+
           totalDistance += Math.hypot(otherTouch.clientX - touch.clientX, otherTouch.clientY - touch.clientY);
           pairCount++;
         }
@@ -1255,19 +1260,14 @@ function onCanvasTouchMove(event) {
     if (pairCount > 1) {
       netMovementX = Math.round(netMovementX / pairCount);
       netMovementY = Math.round(netMovementY / pairCount);
+    }
 
-      const averageDistance = totalDistance / pairCount;
+    const averageDistance = totalDistance / pairCount;
 
-      if (!isNaN(averageTouchDistance)) {
-        const deltaDistance = averageDistance - averageTouchDistance;
-
-        console.log(deltaDistance);
-        if (Math.abs(deltaDistance) / pairCount > 1) {
-          storedScaleChange += deltaDistance > 0 ? 1 : -1;
-        }
-      }
-
-      averageTouchDistance = averageDistance;
+    if (pairCount > 0 && !isNaN(startingTouchDistance) && !isNaN(startingScaleValue)) {
+      const deltaDistance = averageDistance - startingTouchDistance;
+      // Round to the nearest 5
+      storedScaleValue = Math.round((startingScaleValue + deltaDistance) * 0.2) * 5;
     }
 
     storedMovementX += netMovementX;
@@ -1291,12 +1291,12 @@ function onCanvasTouchMove(event) {
           storedMovementY = 0;
         }
 
-        if (storedScaleChange) {
+        if (!isNaN(storedScaleValue)) {
           const scaleInput = document.getElementById('canvasScale');
-          scaleInput.value = +scaleInput.value + scaleInput.step * storedScaleChange;
+          scaleInput.value = storedScaleValue;
           onCanvasScaleValueChange(scaleInput.value, 'canvasScaleValue');
 
-          storedScaleChange = 0;
+          storedScaleValue = NaN;
         }
       });
     }
@@ -1526,51 +1526,52 @@ function onCanvasTouchStart(event) {
   // const newTouch = new Touch({identifier: Date.now(), clientX: 100, clientY: 100, target: contentWrapper});
   // eventTouches.push(newTouch);
 
-  previousBrushstrokePoints = [];
+  const scaleInput = document.getElementById('canvasScale');
+  startingScaleValue = +scaleInput.value;
 
-  if (!interactive) {
-    return;
-  }
+  previousBrushstrokePoints = [];
 
   if (eventTouches.length === 1) {
     for (const touch of eventTouches) {
       touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
     }
 
-    clearTimeout(clickTimeoutId);
-    clickTimeoutId = setTimeout(() => {
+    if (interactive) {
       clearTimeout(clickTimeoutId);
-      clickTimeoutId = null;
-    }, 200);
+      clickTimeoutId = setTimeout(() => {
+        clearTimeout(clickTimeoutId);
+        clickTimeoutId = null;
+      }, 200);
 
-    const toolbar = document.getElementById("toolbar");
+      const toolbar = document.getElementById("toolbar");
 
-    if (toolbar.classList.contains("hidden")) {
-      return;
-    }
+      if (toolbar.classList.contains("hidden")) {
+        return;
+      }
 
-    const selectedTool = getToolbarData().tool;
-    const {x, y} = getCanvasCoordinates(eventTouches[0].clientX, eventTouches[0].clientY);
+      const selectedTool = getToolbarData().tool;
+      const {x, y} = getCanvasCoordinates(eventTouches[0].clientX, eventTouches[0].clientY);
 
-    if (selectedTool === "brush") {
-      event.preventDefault();
-      stopGrowth();
-      storeBrushHistory();
-      brushPixelsChanged = false;
-      isDrawing = true;
-      addBrushstroke(x, y);
-    } else {
-      if (!(x >= 0 && x < CANVAS_WIDTH
-          && y >= 0 && y < CANVAS_HEIGHT)) {
+      if (selectedTool === "brush") {
+        event.preventDefault();
         stopGrowth();
+        storeBrushHistory();
+        brushPixelsChanged = false;
+        isDrawing = true;
+        addBrushstroke(x, y);
       } else {
-        if (!growthActive) {
-          // In case of erasing outline
-          storeBrushHistory();
-          storeFillHistory();
-        }
+        if (!(x >= 0 && x < CANVAS_WIDTH
+            && y >= 0 && y < CANVAS_HEIGHT)) {
+          stopGrowth();
+        } else {
+          if (!growthActive) {
+            // In case of erasing outline
+            storeBrushHistory();
+            storeFillHistory();
+          }
 
-        isFilling = true;
+          isFilling = true;
+        }
       }
     }
   } else {
@@ -1581,18 +1582,20 @@ function onCanvasTouchStart(event) {
     let totalDistance = 0, pairCount = 0;
 
     for (const touch of eventTouches) {
-      if (interactive) {
-        for (const otherTouch of eventTouches) {
-          totalDistance += Math.hypot(otherTouch.clientX - touch.clientX, otherTouch.clientY - touch.clientY);
-          pairCount++;
+      for (const otherTouch of eventTouches) {
+        if (touch.identifier === otherTouch.identifier) {
+          continue;
         }
+
+        totalDistance += Math.hypot(otherTouch.clientX - touch.clientX, otherTouch.clientY - touch.clientY);
+        pairCount++;
       }
 
       touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
     }
 
     if (pairCount > 1) {
-      averageTouchDistance = totalDistance / pairCount;
+      startingTouchDistance = totalDistance / pairCount;
     }
   }
 
@@ -1607,7 +1610,7 @@ function onCanvasTouchEnd(event) {
   }
 
   if (event.touches.length < 2) {
-    averageTouchDistance = NaN;
+    startingTouchDistance = NaN;
     document.getElementById("contentWrapper").classList.remove("positioning");
 
     if (event.touches.length === 0) {
@@ -1623,6 +1626,27 @@ function onCanvasTouchEnd(event) {
         clickTimeoutId = null;
         handleClick(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
       }
+    }
+  } else if (event.touches.length > 1) {
+    let totalDistance = 0, pairCount = 0;
+
+    for (const touch of event.touches) {
+      for (const otherTouch of event.touches) {
+        if (touch.identifier === otherTouch.identifier) {
+          continue;
+        }
+
+        totalDistance += Math.hypot(otherTouch.clientX - touch.clientX, otherTouch.clientY - touch.clientY);
+        pairCount++;
+      }
+
+      touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
+    }
+
+    if (pairCount > 0) {
+      const scaleInput = document.getElementById('canvasScale');
+      startingScaleValue = +scaleInput.value;
+      startingTouchDistance = totalDistance / pairCount;
     }
   }
 }
