@@ -1262,7 +1262,7 @@ function onCanvasTouchMove(event) {
         const deltaDistance = averageDistance - averageTouchDistance;
 
         console.log(deltaDistance);
-        if (Math.abs(deltaDistance) / pairCount > 0.2) {
+        if (Math.abs(deltaDistance) / pairCount > 1) {
           storedScaleChange += deltaDistance > 0 ? 1 : -1;
         }
       }
