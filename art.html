@@ -1265,7 +1265,8 @@ function onCanvasTouchMove(event) {
     const averageDistance = totalDistance / pairCount;
 
     if (pairCount > 0 && !isNaN(startingTouchDistance) && !isNaN(startingScaleValue)) {
-      const deltaDistance = averageDistance - startingTouchDistance;
+      const normalizationFactor = 0.05;
+      const deltaDistance = (averageDistance - startingTouchDistance) * normalizationFactor;
       // Round to the nearest 5
       storedScaleValue = Math.round((startingScaleValue + deltaDistance) * 0.2) * 5;
     }
