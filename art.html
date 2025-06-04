@@ -187,17 +187,7 @@ function getToolbarData() {
   return Object.fromEntries(data);
 }
 
-function onToolChange(event) {
-  const tool = event.currentTarget.value;
-
-  for (const submenu of document.getElementsByClassName("submenu")) {
-    if (submenu.id === `${tool}-menu`) {
-      submenu.classList.remove("hidden");
-    } else {
-      submenu.classList.add("hidden");
-    }
-  }
-
+function onToolChange() {
   updateHistoryButtons();
 }
 
@@ -1329,12 +1319,6 @@ function toggleMenuCollapse(event) {
   }
 }
 
-function toggleGuidelines() {
-  for (const guide of document.getElementsByClassName("guide")) {
-    guide.classList.toggle("hidden");
-  }
-}
-
 // eslint-disable-next-line no-unused-vars
 function viewCanvas() {
   document.getElementById("toolbar").classList.add("hidden");
@@ -2239,6 +2223,15 @@ canvas {
   .outer-menu {
     align-items: flex-start;
     flex-wrap: nowrap;
+
+    &:not(:has(input[value=brush]:checked)) ~ #brush-menu,
+    &:not(:has(input[value=fill]:checked)) ~ #fill-menu {
+      display: none;
+    }
+  }
+
+  &:has(#toggle-guidelines>input:not(:checked)) ~ #contentWrapper .guide {
+    display: none;
   }
 
   .menu {
@@ -2371,7 +2364,7 @@ canvas {
         <div class="collapsible">
           <label id="toggle-guidelines" aria-label="Toggle Guidelines" title="Toggle Guidelines">
             📏
-            <input type="checkbox" onchange="toggleGuidelines(event)" />
+            <input type="checkbox" />
           </label>
 
           <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">🎯</button>
@@ -2438,7 +2431,7 @@ canvas {
       </div>
     </div>
 
-    <div id="fill-menu" class="submenu collapsible hidden">
+    <div id="fill-menu" class="submenu collapsible">
       <label aria-label="Color for Fill" title="Color for Fill">
         <span style="visibility: hidden";>🎨</span>
         <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
@@ -2482,10 +2475,10 @@ canvas {
     onwheel="onCanvasScroll(event)"
     oncontextmenu="onContextMenu(event)"
   >
-    <div class="guide vertical center hidden"></div>
-    <div class="guide horizontal center hidden"></div>
-    <div class="guide vertical cursor hidden"></div>
-    <div class="guide horizontal cursor hidden"></div>
+    <div class="guide vertical center"></div>
+    <div class="guide horizontal center"></div>
+    <div class="guide vertical cursor"></div>
+    <div class="guide horizontal cursor"></div>
 
     <div id="canvasWrapper"></div>
   </div>
