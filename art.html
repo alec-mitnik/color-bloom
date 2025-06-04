@@ -54,8 +54,10 @@ let fillPixelsChanged = false;
 let canvasMoveScheduled = false;
 let storedMovementX = 0;
 let storedMovementY = 0;
+let storedScaleChange = 0;
 let clickTimeoutId;
 const touches = new Map();
+let averageTouchDistance = NaN;
 
 let HUE_MUTATION;
 
@@ -1218,64 +1220,104 @@ function onCanvasMouseMove(event) {
 function onCanvasTouchMove(event) {
   event.preventDefault();
 
-  let netMovementX = 0, netMovementY = 0;
+  const eventTouches = [...event.touches];
 
-  for (const touch of event.changedTouches) {
+  // For testing
+  // const contentWrapper = document.getElementById("contentWrapper");
+  // const newTouch = new Touch({identifier: Date.now(), clientX: 100, clientY: 100, target: contentWrapper});
+  // eventTouches.push(newTouch);
+
+  const draggingCanvas = eventTouches.length !== 1
+      && document.getElementById("contentWrapper").classList.contains("positioning")
+  const shouldDrag = draggingCanvas && interactive;
+
+  let netMovementX = 0, netMovementY = 0, totalDistance = 0, pairCount = 0;
+
+  for (const touch of eventTouches) {
     const oldTouch = touches.get(touch.identifier);
 
     if (oldTouch) {
       netMovementX += touch.clientX - oldTouch.clientX;
       netMovementY += touch.clientY - oldTouch.clientY;
+
+      if (shouldDrag) {
+        for (const otherTouch of eventTouches) {
+          totalDistance += Math.hypot(otherTouch.clientX - touch.clientX, otherTouch.clientY - touch.clientY);
+          pairCount++;
+        }
+      }
     }
 
     touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
   }
 
-  const draggingCanvas = event.touches.length !== 1
-      && document.getElementById("contentWrapper").classList.contains("positioning")
-  const shouldDrag = draggingCanvas && interactive;
-
   if (shouldDrag) {
+    if (pairCount > 1) {
+      netMovementX = Math.round(netMovementX / pairCount);
+      netMovementY = Math.round(netMovementY / pairCount);
+
+      const averageDistance = totalDistance / pairCount;
+
+      if (!isNaN(averageTouchDistance)) {
+        const deltaDistance = averageDistance - averageTouchDistance;
+
+        console.log(deltaDistance);
+        if (Math.abs(deltaDistance) / pairCount > 0.2) {
+          storedScaleChange += deltaDistance > 0 ? 1 : -1;
+        }
+      }
+
+      averageTouchDistance = averageDistance;
+    }
+
     storedMovementX += netMovementX;
     storedMovementY += netMovementY;
-  }
 
-  if (!canvasMoveScheduled) {
-    canvasMoveScheduled = true;
+    if (!canvasMoveScheduled) {
+      canvasMoveScheduled = true;
 
-    requestAnimationFrame(() => {
-      canvasMoveScheduled = false;
+      requestAnimationFrame(() => {
+        canvasMoveScheduled = false;
 
-      if (shouldDrag) {
-        const offsetLimitX = window.innerWidth * 0.6;
-        const offsetLimitY = window.innerHeight * 0.6;
-        setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + storedMovementX,
-            -offsetLimitX), offsetLimitX)}px`);
-        setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + storedMovementY,
-            -offsetLimitY), offsetLimitY)}px`);
+        if (storedMovementX || storedMovementY) {
+          const offsetLimitX = window.innerWidth * 0.6;
+          const offsetLimitY = window.innerHeight * 0.6;
+          setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + storedMovementX,
+              -offsetLimitX), offsetLimitX)}px`);
+          setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + storedMovementY,
+              -offsetLimitY), offsetLimitY)}px`);
 
-        storedMovementX = 0;
-        storedMovementY = 0;
-      }
-    });
+          storedMovementX = 0;
+          storedMovementY = 0;
+        }
+
+        if (storedScaleChange) {
+          const scaleInput = document.getElementById('canvasScale');
+          scaleInput.value = +scaleInput.value + scaleInput.step * storedScaleChange;
+          onCanvasScaleValueChange(scaleInput.value, 'canvasScaleValue');
+
+          storedScaleChange = 0;
+        }
+      });
+    }
   }
 
   if (!interactive) {
     return;
   }
 
-  if (event.touches.length === 1) {
+  if (eventTouches.length === 1) {
     const selectedTool = getToolbarData().tool;
 
     if (isDrawing) {
       if (selectedTool === "brush") {
-        let {x, y} = getCanvasCoordinates(event.touches[0].clientX, event.touches[0].clientY);
+        let {x, y} = getCanvasCoordinates(eventTouches[0].clientX, eventTouches[0].clientY);
         addBrushstroke(x, y);
       }
     } else if (isFilling) {
       clearTimeout(clickTimeoutId);
       clickTimeoutId = null;
-      handleClick(event.touches[0].clientX, event.touches[0].clientY, true);
+      handleClick(eventTouches[0].clientX, eventTouches[0].clientY, true);
     }
   }
 }
@@ -1477,17 +1519,24 @@ function onCanvasMouseUp(event) {
 function onCanvasTouchStart(event) {
   event.preventDefault();
 
+  const eventTouches = [...event.touches];
+
+  // For testing
+  // const contentWrapper = document.getElementById("contentWrapper");
+  // const newTouch = new Touch({identifier: Date.now(), clientX: 100, clientY: 100, target: contentWrapper});
+  // eventTouches.push(newTouch);
+
   previousBrushstrokePoints = [];
 
   if (!interactive) {
     return;
   }
 
-  for (const touch of event.changedTouches) {
-    touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
-  }
+  if (eventTouches.length === 1) {
+    for (const touch of eventTouches) {
+      touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
+    }
 
-  if (event.touches.length === 1) {
     clearTimeout(clickTimeoutId);
     clickTimeoutId = setTimeout(() => {
       clearTimeout(clickTimeoutId);
@@ -1501,7 +1550,7 @@ function onCanvasTouchStart(event) {
     }
 
     const selectedTool = getToolbarData().tool;
-    const {x, y} = getCanvasCoordinates(event.touches[0].clientX, event.touches[0].clientY);
+    const {x, y} = getCanvasCoordinates(eventTouches[0].clientX, eventTouches[0].clientY);
 
     if (selectedTool === "brush") {
       event.preventDefault();
@@ -1528,6 +1577,23 @@ function onCanvasTouchStart(event) {
     finishDrawing();
     stopFilling();
     document.getElementById("contentWrapper").classList.add("positioning");
+
+    let totalDistance = 0, pairCount = 0;
+
+    for (const touch of eventTouches) {
+      if (interactive) {
+        for (const otherTouch of eventTouches) {
+          totalDistance += Math.hypot(otherTouch.clientX - touch.clientX, otherTouch.clientY - touch.clientY);
+          pairCount++;
+        }
+      }
+
+      touches.set(touch.identifier, {identifier: touch.identifier, clientX: touch.clientX, clientY: touch.clientY});
+    }
+
+    if (pairCount > 1) {
+      averageTouchDistance = totalDistance / pairCount;
+    }
   }
 
   setCssVar('--toolbar-pointer-events', 'none');
@@ -1541,6 +1607,7 @@ function onCanvasTouchEnd(event) {
   }
 
   if (event.touches.length < 2) {
+    averageTouchDistance = NaN;
     document.getElementById("contentWrapper").classList.remove("positioning");
 
     if (event.touches.length === 0) {
