@@ -749,9 +749,12 @@ export async function bloomImage({
       } else {
         // position: fixed breaks on mobile for direct children of body
         const canvasWrapperWrapper = document.createElement("div");
+        canvasWrapperWrapper.ariaHidden = canvasWrapper.ariaHidden;
         Object.assign(canvasWrapperWrapper.style, {
           position: "absolute",
           inset: 0,
+          width: "100%",
+          height: "100%",
           zIndex: -1,
           overflow: "hidden",
         });
@@ -991,9 +994,12 @@ export function bloomColor({
       } else {
         // position: fixed breaks on mobile for direct children of body
         const canvasWrapperWrapper = document.createElement("div");
+        canvasWrapperWrapper.ariaHidden = canvasWrapper.ariaHidden;
         Object.assign(canvasWrapperWrapper.style, {
           position: "absolute",
           inset: 0,
+          width: "100%",
+          height: "100%",
           zIndex: -1,
           overflow: "hidden",
         });
