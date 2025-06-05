@@ -649,7 +649,10 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
  * @param {Object} [options] - Config options for the bloom effect.
  * @param {number} [options.x] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
  * @param {number} [options.y] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * @param {CSSStyleDeclaration} [options.overridingStyles] - An object of overriding styles to apply to the canvas wrapper, such as zIndex.
+ * @param {CSSStyleDeclaration} [options.overridingCanvasWrapperStyles] - An object of overriding styles to apply to the canvas wrapper, such as zIndex.
+ * @param {CSSStyleDeclaration} [options.overridingCanvasStyles] - An object of overriding styles to apply to the canvas, such as zIndex.
+ * @param {Object} [options.overridingCanvasWrapperAttributes] - An object of overriding attributes to apply to the canvas wrapper, such as ariaLabel.
+ * @param {Object} [options.overridingCanvasAttributes] - An object of overriding attributes to apply to the canvas, such as ariaLabel.
  * @param {number} [options.imageX] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want the image centered at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
  * @param {number} [options.imageY] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want the image centered at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
  * @param {number} [options.widthOverride] - Overrides the width of the image.  If not provided, the image file's inherent width will be used.  To size the image to the spawning element, use `spawningElement.getBoundingClientRect().width`.
@@ -665,7 +668,10 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
 export async function bloomImage({
   x: bloomX = NaN,
   y: bloomY = NaN,
-  overridingStyles = {},
+  overridingCanvasWrapperStyles = {},
+  overridingCanvasStyles = {},
+  overridingCanvasWrapperAttributes = {},
+  overridingCanvasAttributes = {},
   imageX = NaN,
   imageY = NaN,
   widthOverride = NaN,
@@ -699,13 +705,18 @@ export async function bloomImage({
     canvas = document.createElement("canvas");
     canvas.width = window.screen.width;
     canvas.height = window.screen.height;
-    canvas.style.pointerEvents = "none";
-    canvas.style.position = "absolute";
 
     if (confineToSpawningElement) {
       canvas.width = width;
       canvas.height = height;
     }
+
+    Object.assign(canvas, overridingCanvasAttributes);
+    Object.assign(canvas.style, {
+      pointerEvents: "none",
+      position: "absolute",
+      ...overridingCanvasStyles,
+    });
 
     blooms.get(spawningElement).canvas = canvas;
 
@@ -716,8 +727,10 @@ export async function bloomImage({
 
       if (!confineToSpawningElement) {
         canvasWrapper.id = CANVAS_WRAPPER_ID;
+        canvasWrapper.ariaHidden = true;
       }
 
+      Object.assign(canvasWrapper, overridingCanvasWrapperAttributes);
       Object.assign(canvasWrapper.style, {
         position: confineToSpawningElement ? "absolute" : "fixed",
         inset: 0,
@@ -727,7 +740,7 @@ export async function bloomImage({
         justifyContent: "center",
         alignItems: "center",
         pointerEvents: "none",
-        ...overridingStyles,
+        ...overridingCanvasWrapperStyles,
       });
 
       if (confineToSpawningElement) {
@@ -864,7 +877,10 @@ export async function bloomImage({
  * @param {Object} [options] - Config options for the bloom effect.
  * @param {number} [options.x] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientX - spawningElement.getBoundingClientRect().x` if confineToSpawningElement is true, otherwise `(window.screen.width - window.innerWidth) / 2 + MouseEvent.clientX`.
  * @param {number} [options.y] - Will be the center of the canvas or aligned with the center of a specified spawning element by default.  If you want to bloom at mouse coordinates, use `MouseEvent.clientY - spawningElement.getBoundingClientRect().y` if confineToSpawningElement is true, otherwise `(window.screen.height - window.innerHeight) / 2 + MouseEvent.clientY`.
- * @param {CSSStyleDeclaration} [options.overridingStyles] - An object of overriding styles to apply to the canvas wrapper, such as zIndex.
+ * @param {CSSStyleDeclaration} [options.overridingCanvasWrapperStyles] - An object of overriding styles to apply to the canvas wrapper, such as zIndex.
+ * @param {CSSStyleDeclaration} [options.overridingCanvasStyles] - An object of overriding styles to apply to the canvas, such as zIndex.
+ * @param {Object} [options.overridingCanvasWrapperAttributes] - An object of overriding attributes to apply to the canvas wrapper, such as ariaLabel.
+ * @param {Object} [options.overridingCanvasAttributes] - An object of overriding attributes to apply to the canvas, such as ariaLabel.
  * @param {HTMLElement} [options.spawningElement] - The HTML element to spawn the bloom from.  Defaults to `document.body`.
  * @param {Object} [options.color] - The starting color in HSL color space.  Defaults to a random hue, full saturation, and mid lightness.
  * @param {number} [options.color.h] - The hue, as a value from 0 to 359.  Defaults to a random value.
@@ -882,7 +898,10 @@ export async function bloomImage({
 export function bloomColor({
   x: bloomX = NaN,
   y: bloomY = NaN,
-  overridingStyles = {},
+  overridingCanvasWrapperStyles = {},
+  overridingCanvasStyles = {},
+  overridingCanvasWrapperAttributes = {},
+  overridingCanvasAttributes = {},
   spawningElement = document.body,
   color = {},
   hueVariance = generateHueMutation(),
@@ -928,13 +947,18 @@ export function bloomColor({
     canvas = document.createElement("canvas");
     canvas.width = window.screen.width;
     canvas.height = window.screen.height;
-    canvas.style.pointerEvents = "none";
-    canvas.style.position = "absolute";
 
     if (confineToSpawningElement) {
       canvas.width = width;
       canvas.height = height;
     }
+
+    Object.assign(canvas, overridingCanvasAttributes);
+    Object.assign(canvas.style, {
+      pointerEvents: "none",
+      position: "absolute",
+      ...overridingCanvasStyles,
+    });
 
     blooms.get(spawningElement).canvas = canvas;
 
@@ -945,8 +969,10 @@ export function bloomColor({
 
       if (!confineToSpawningElement) {
         canvasWrapper.id = CANVAS_WRAPPER_ID;
+        canvasWrapper.ariaHidden = true;
       }
 
+      Object.assign(canvasWrapper, overridingCanvasWrapperAttributes);
       Object.assign(canvasWrapper.style, {
         position: confineToSpawningElement ? "absolute" : "fixed",
         inset: 0,
@@ -956,7 +982,7 @@ export function bloomColor({
         justifyContent: "center",
         alignItems: "center",
         pointerEvents: "none",
-        ...overridingStyles,
+        ...overridingCanvasWrapperStyles,
       });
 
       if (confineToSpawningElement) {

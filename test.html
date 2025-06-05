@@ -30,12 +30,12 @@
   const testImageDiv = document.getElementById("testImageDiv");
   testImageDiv.onmousemove = (event) => {
     const {x, y} = event.currentTarget.getBoundingClientRect();
-    ColorBloom.bloomImage({src: 'images/selfAvatar2.jpg', x: event.clientX - x, y: event.clientY - y, overridingStyles: {zIndex: 1},
+    ColorBloom.bloomImage({src: 'images/selfAvatar2.jpg', x: event.clientX - x, y: event.clientY - y, overridingCanvasWrapperStyles: {zIndex: 1},
         spawningElement: event.currentTarget, confineToSpawningElement: true, speed: 0.2});
   };
   testImageDiv.ontouchmove = (event) => {
     const {x, y} = event.currentTarget.getBoundingClientRect();
-    ColorBloom.bloomImage({src: 'images/selfAvatar2.jpg', x: event.touches[0].clientX - x, y: event.touches[0].clientY - y, overridingStyles: {zIndex: 1},
+    ColorBloom.bloomImage({src: 'images/selfAvatar2.jpg', x: event.touches[0].clientX - x, y: event.touches[0].clientY - y, overridingCanvasWrapperStyles: {zIndex: 1},
         spawningElement: event.currentTarget, confineToSpawningElement: true, speed: 0.2});
   };
 
