@@ -9,14 +9,13 @@
 "use strict"
 
 /* TODO:
- * - Add eraser brush, or maybe just add eraser toggle to both brush and fill, and color selection for brush
+ * - Add eraser brush, or maybe just add eraser toggle to both brush and fill
+ * - Add color selection for brush
  * - Support width varying by speed of strokes or pressure of touch/stylus
  * - Support min/max thickness settings for generated patterns
  * - Support custom canvas sizes
  * - Support uploading own images as templates
- * - Unify undo/redo for brush and fill, and overhaul state/history management
  * - Add tip button
- * - Use putImageData for batch rendering?  Doesn't seem to help performance much...
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
  */
 
@@ -33,7 +32,11 @@ const MAX_LIGHTNESS = 0.6;
 let LIGHTNESS_MUTATION;
 let STARTING_LIGHTNESS;
 
-const HISTORY_LIMIT = 10;
+const HISTORY_LIMIT = 1 + 10;
+const BRUSH_STROKE_REPEATS = 50;
+let brushStrokeCounter = 1;
+let combinedHistory = [];
+let combinedHistoryIndex = 0;
 let fillImageDataHistory = [];
 let fillPixelGridHistory = [];
 let brushPixelGridHistory = [];
@@ -187,10 +190,6 @@ function getToolbarData() {
   return Object.fromEntries(data);
 }
 
-function onToolChange() {
-  updateHistoryButtons();
-}
-
 function step() {
   return new Promise(resolve => {
     // requestAnimationFrame(resolve);
@@ -280,174 +279,35 @@ function erasePixel(x, y, erasingOutline) {
   }
 }
 
-/* function addBrushPoint(x, y, brushSize, drawPixels = false) {
-  const neighborDepth = (brushSize - 1) * 0.5;
-  const neighborDepthSquared = neighborDepth ** 2;
-  const gridDepth = Math.ceil(neighborDepth + 4);
-  // const gridDepth = Math.floor(neighborDepth);
-  const gridDepthSquared = gridDepth ** 2;
-  const brushSizeEven = brushSize % 2 === 0;
-  const neighborOuterDepth = neighborDepth + 1;
-  const neighborOuterDepthSquared = neighborOuterDepth ** 2;
-  const brushPixelGrid = getBrushPixelGrid();
-
-  for (let i = -gridDepth; i <= gridDepth; i++) {
-    for (let j = -gridDepth; j <= gridDepth; j++) {
-      const pixelX = x + i;
-      const pixelY = y + j;
-
-      if (pixelX < 0 || pixelX >= CANVAS_WIDTH || pixelY < 0 || pixelY >= CANVAS_HEIGHT) {
-        continue;
-      }
-
-      const squares = i ** 2 + j ** 2;
-
-      if (squares < gridDepthSquared) {
-        const a = squares < neighborOuterDepthSquared ? Math.max(Math.min((neighborOuterDepth - Math.sqrt(squares)) ** 2, 1), 0.01) : 0.01;
-
-        const pixel = {x: pixelX, y: pixelY, h: 0, s: 0, l: 0, a: Math.max(a, brushPixelGrid[pixelX][pixelY]?.a || 0)};
-
-        brushPixelGrid[pixel.x][pixel.y] = pixel;
-        brushPixelsChanged = true;
-
-        if (drawPixels) {
-          drawPixel(pixel, getBrushCanvas());
-        }
-      }
-
-      // if (squares < neighborDepthSquared) {
-      //   // TODO - support anti-aliasing and even brush sizes...?
-      //   const pixel = {x: pixelX, y: pixelY, h: 0, s: 0, l: 0, a: 1};
-
-      //   brushPixelGrid[pixel.x][pixel.y] = pixel;
-      // }
-    }
-  }
-} */
-
-// TODO
-const BRUSH_STROKE_REPEATS = 50;
-let brushStrokeCounter = 1;
-function addBrushstroke(x, y, finishing = false) {
-  // brushStrokeCounter++;
-  // if (brushStrokeCounter % 10 !== 0) {
-  //   return;
-  // }
-  // brushStrokeCounter = 0;
-
-  const brushSize = getToolbarData().brushSize - 2; // TODO
+function addBrushstroke(x, y) {
+  const brushSize = getToolbarData().brushSize - 2;
   const canvas = getBrushCanvas();
 
   const context = canvas.getContext("2d");
   context.strokeStyle = "black";
   context.lineWidth = brushSize - 2;
   context.lineCap = "round";
-  context.lineJoin = "round"; // TODO
-  // context.imageSmoothingQuality = "high";
+  context.lineJoin = "round";
   context.shadowColor = context.strokeStyle;
   context.shadowBlur = 2;
 
-  // TODO
-  /* if (false && previousBrushstrokePoints.length > 1) {
-    const {x: refX, y: refY} = previousBrushstrokePoints[1]; // Reference point
-    const {x: prevX, y: prevY} = previousBrushstrokePoints[0]; // Start point
-
-    // if (previousBrushstroke.x !== x || previousBrushstroke.y !== y) {
-      const tensionFactor = 0.5;
-      const dx1 = prevX - refX;
-      const dy1 = prevY - refY;
-      const dx2 = x - prevX;
-      const dy2 = y - prevY;
-
-      // if (Math.abs(dx2) < 3 && Math.abs(dy2) < 3) {
-      //   return;
-      // }
-
-      // const controlPointX = ((prevX + dx1 * tensionFactor) * 2 + prevX + x) / 4;
-      // const controlPointY = ((prevY + dy1 * tensionFactor) * 2 + prevY + y) / 4;
-
-      // Fill all pixels between the previous brushstroke and the current one
-      // const length = Math.sqrt(dx * dx + dy * dy);
-      // const stepX = dx / length;
-      // const stepY = dy / length;
-
-      // for (let i = 0; i < length; i++) {
-      //   addBrushPoint(Math.round(prevX + stepX * i), Math.round(prevY + stepY * i), brushSize);
-      // }
-
-
-      // Calculate tangent vectors
-      const tangent1 = this.getTangent(previousBrushstrokePoints[1], previousBrushstrokePoints[1]);
-      const tangent2 = this.getTangent(previousBrushstrokePoints[0], {x, y});
-
-      // Use weighted average of tangents
-      const alpha = 0.5; // Balance between the two tangent directions
-      const tx = (1 - alpha) * tangent1.x + alpha * tangent2.x;
-      const ty = (1 - alpha) * tangent1.y + alpha * tangent2.y;
-
-      // Distance for control point (proportional to segment length)
-      const segLength = Math.sqrt(
-        Math.pow(dx2, 2) + Math.pow(dy2, 2)
-      );
-      const ctrlDist = segLength * 0.3;
-
-      const controlPointX = prevX + tx * ctrlDist;
-      const controlPointY = prevY + ty * ctrlDist;
-
-
-      // context.beginPath();
-      context.moveTo(prevX, prevY);
-      context.quadraticCurveTo(controlPointX, controlPointY, x, y);
-      context.stroke();
-      // context.closePath();
-
-      // context.fillStyle = "blue";
-      // context.beginPath();
-      // context.arc(x, y, 5, 0, 2 * Math.PI);
-      // context.fill();
-
-      // context.fillStyle = "red";
-      // context.beginPath();
-      // context.arc(controlPointX, controlPointY, 2, 0, 2 * Math.PI);
-      // context.fill();
-    // }
-  } else  */if (previousBrushstrokePoints.length) {
+  if (previousBrushstrokePoints.length) {
     context.beginPath();
-    context.moveTo(previousBrushstrokePoints[previousBrushstrokePoints.length - 1].x, previousBrushstrokePoints[previousBrushstrokePoints.length - 1].y);
+    context.moveTo(previousBrushstrokePoints[previousBrushstrokePoints.length - 1].x,
+        previousBrushstrokePoints[previousBrushstrokePoints.length - 1].y);
 
     for (let i = previousBrushstrokePoints.length - 2; i >= 0; i--) {
       context.lineTo(previousBrushstrokePoints[i].x, previousBrushstrokePoints[i].y);
     }
 
     context.stroke();
-
-    // const {x: prevX, y: prevY} = previousBrushstrokePoints[0];
-    // const dx = x - prevX;
-    // const dy = y - prevY;
-
-    // // Fill all pixels between the previous brushstroke and the current one
-    // const length = Math.sqrt(dx * dx + dy * dy);
-    // const stepX = dx / length;
-    // const stepY = dy / length;
-
-    // for (let i = 0; i < length; i++) {
-    //   addBrushPoint(Math.round(prevX + stepX * i), Math.round(prevY + stepY * i), brushSize);
-    // }
-
-    // context.beginPath();
-    // context.moveTo(prevX, prevY);
-    // context.lineTo(x, y);
-    // context.stroke();
-    // context.closePath();
   } else {
-    // addBrushPoint(x, y, brushSize);
-
     context.beginPath();
     context.moveTo(x, y);
+
     // iOS Safari won't render a line with a single point, so add a tiny offset
     context.lineTo(x + 0.01, y);
     context.stroke();
-    // context.closePath();
   }
 
   previousBrushstrokePoints.unshift({x, y});
@@ -456,19 +316,18 @@ function addBrushstroke(x, y, finishing = false) {
     previousBrushstrokePoints.pop();
   }
 
-  if (!finishing) {
-    const distance = (x - allBrushstrokePoints[allBrushstrokePoints.length - 1]?.x) ** 2 + (y - allBrushstrokePoints[allBrushstrokePoints.length - 1]?.y) ** 2;
+  const distance = (x - allBrushstrokePoints[allBrushstrokePoints.length - 1]?.x) ** 2
+      + (y - allBrushstrokePoints[allBrushstrokePoints.length - 1]?.y) ** 2;
 
-    if (allBrushstrokePoints.length === 0) {
-      allBrushstrokePoints.push({x, y});
+  if (allBrushstrokePoints.length === 0) {
+    allBrushstrokePoints.push({x, y});
+    brushStrokeCounter = 1;
+  } else {
+    if (distance > getSmoothingSquaredDistance() || brushStrokeCounter % Math.ceil(getSmoothingSquaredDistance() * 0.005 + 1) === 0) {
       brushStrokeCounter = 1;
+      allBrushstrokePoints.push({x, y});
     } else {
-      if (distance > getSmoothingSquaredDistance() || brushStrokeCounter % Math.ceil(getSmoothingSquaredDistance() * 0.005 + 1) === 0) {
-        brushStrokeCounter = 1;
-        allBrushstrokePoints.push({x, y});
-      } else {
-        brushStrokeCounter++;
-      }
+      brushStrokeCounter++;
     }
   }
 }
@@ -476,19 +335,6 @@ function addBrushstroke(x, y, finishing = false) {
 function getSmoothingSquaredDistance() {
   return getToolbarData().smoothing ** 3 * 50000;
 }
-
-// TODO
-/* function getTangent(p1, p2) {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-
-  // Return normalized vector
-  return {
-    x: dist > 0 ? dx / dist : 0,
-    y: dist > 0 ? dy / dist : 0
-  };
-} */
 
 function mutateHue(h) {
   let actualMutation = HUE_MUTATION * 7.5;
@@ -625,7 +471,6 @@ async function grow(x, y, erase = false, erasingOutline = false) {
 
     stopGrowth();
   } else {
-    // TODO
     addStartingPixel(x, y);
   }
 }
@@ -704,7 +549,7 @@ function storeFillHistory() {
   fillPixelGridHistory.unshift(getFillPixelGrid().map(col => [...col]));
   storeFillCanvas();
 
-  if (fillPixelGridHistory.length > HISTORY_LIMIT) {
+  /* if (fillPixelGridHistory.length > HISTORY_LIMIT) {
     fillPixelGridHistory.pop();
     fillImageDataHistory.pop();
   }
@@ -712,7 +557,7 @@ function storeFillHistory() {
   if (fillCanvasHistory.length > HISTORY_LIMIT) {
     const canvas = fillCanvasHistory.pop();
     canvas.remove();
-  }
+  } */
 }
 
 function storeBrushHistory() {
@@ -731,14 +576,43 @@ function storeBrushHistory() {
   brushPixelGridHistory.unshift(getBrushPixelGrid().map(col => [...col]));
   storeBrushCanvas();
 
-  if (brushPixelGridHistory.length > HISTORY_LIMIT) {
+  /* if (brushPixelGridHistory.length > HISTORY_LIMIT) {
     brushPixelGridHistory.pop();
   }
 
   if (brushCanvasHistory.length > HISTORY_LIMIT) {
     const canvas = brushCanvasHistory.pop();
     canvas.remove();
+  } */
+}
+
+function storeCombinedHistory(historyType) {
+  // Remove all redos
+  if (combinedHistoryIndex > 0) {
+    combinedHistory.splice(0, combinedHistoryIndex);
+    combinedHistoryIndex = 0;
   }
+
+  combinedHistory.unshift(historyType);
+
+  if (combinedHistory.length > HISTORY_LIMIT) {
+    combinedHistory.pop();
+  }
+
+  if (fillPixelGridHistory.length > HISTORY_LIMIT) {
+    fillPixelGridHistory.pop();
+    fillImageDataHistory.pop();
+    const fillCanvas = fillCanvasHistory.pop();
+    fillCanvas.remove();
+  }
+
+  if (brushPixelGridHistory.length > HISTORY_LIMIT) {
+    brushPixelGridHistory.pop();
+    const brushCanvas = brushCanvasHistory.pop();
+    brushCanvas.remove();
+  }
+
+  updateHistoryButtons();
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -802,14 +676,18 @@ function undo() {
     return;
   }
 
-  const toolbarData = getToolbarData();
-  const selectedTool = toolbarData.tool;
+  const historyType = combinedHistory[combinedHistoryIndex]
 
-  if (selectedTool === "brush") {
-    undoBrush();
-  } else {
-    undoFill(); // TODO - unfill?
+  if (historyType === "fill" || historyType === "both") {
+    undoFill();
   }
+
+  if (historyType === "brush" || historyType === "both") {
+    undoBrush();
+  }
+
+  combinedHistoryIndex++;
+  updateHistoryButtons();
 }
 
 function undoFill(allowRedo = true) {
@@ -819,15 +697,22 @@ function undoFill(allowRedo = true) {
     if (allowRedo) {
       getFillCanvas().style.display = "none";
       fillHistoryIndex++;
-    } else {
+    } else /* if (fillPixelGridHistory.length > 1) */ {
       getFillCanvas().remove();
       fillPixelGridHistory.splice(fillHistoryIndex, 1);
       fillImageDataHistory.splice(fillHistoryIndex, 1);
       fillCanvasHistory.splice(fillHistoryIndex, 1);
+
+      if (combinedHistory[combinedHistoryIndex] === "fill") {
+        combinedHistory.splice(combinedHistoryIndex, 1);
+      } else if (combinedHistory[combinedHistoryIndex] === "both") {
+        combinedHistory[combinedHistoryIndex] = "brush";
+      }
+
+      updateHistoryButtons();
     }
 
-    getFillCanvas().style.display = null;
-    updateHistoryButtons(); // TODO
+    getFillCanvas().style.display = null
   }
 }
 
@@ -838,14 +723,21 @@ function undoBrush(allowRedo = true) {
     if (allowRedo) {
       getBrushCanvas().style.display = "none";
       brushHistoryIndex++;
-    } else {
+    } else /* if (brushPixelGridHistory.length > 1) */ {
       getBrushCanvas().remove();
       brushPixelGridHistory.splice(brushHistoryIndex, 1);
       brushCanvasHistory.splice(brushHistoryIndex, 1);
+
+      if (combinedHistory[combinedHistoryIndex] === "brush") {
+        combinedHistory.splice(combinedHistoryIndex, 1);
+      } else if (combinedHistory[combinedHistoryIndex] === "both") {
+        combinedHistory[combinedHistoryIndex] = "fill";
+      }
+
+      updateHistoryButtons();
     }
 
     getBrushCanvas().style.display = null;
-    updateHistoryButtons(); // TODO
   }
 }
 
@@ -855,13 +747,28 @@ function redo() {
     return;
   }
 
-  const toolbarData = getToolbarData();
+  /* const toolbarData = getToolbarData();
   const selectedTool = toolbarData.tool;
 
   if (selectedTool === "brush") {
     redoBrush();
   } else {
-    redoFill(); // TODO - unfill?
+    redoFill();
+  } */
+
+  if (combinedHistoryIndex > 0) {
+    combinedHistoryIndex--;
+    const historyType = combinedHistory[combinedHistoryIndex];
+
+    if (historyType === "fill" || historyType === "both") {
+      redoFill();
+    }
+
+    if (historyType === "brush" || historyType === "both") {
+      redoBrush();
+    }
+
+    updateHistoryButtons();
   }
 }
 
@@ -871,7 +778,7 @@ function redoFill() {
     getFillCanvas().style.display = "none";
     fillHistoryIndex--;
     getFillCanvas().style.display = null;
-    updateHistoryButtons(); // TODO
+    // updateHistoryButtons();
   }
 }
 
@@ -881,13 +788,12 @@ function redoBrush() {
     getBrushCanvas().style.display = "none";
     brushHistoryIndex--;
     getBrushCanvas().style.display = null;
-    updateHistoryButtons(); // TODO
+    // updateHistoryButtons();
   }
 }
 
-// TODO
 function updateHistoryButtons() {
-  const toolbarData = getToolbarData();
+  /* const toolbarData = getToolbarData();
   const selectedTool = toolbarData.tool;
 
   let historyIndex = fillHistoryIndex;
@@ -899,7 +805,10 @@ function updateHistoryButtons() {
   }
 
   document.getElementById("undoButton").disabled = historyIndex >= pixelGridHistory.length - 1;
-  document.getElementById("redoButton").disabled = historyIndex <= 0;
+  document.getElementById("redoButton").disabled = historyIndex <= 0; */
+
+  document.getElementById("undoButton").disabled = combinedHistoryIndex >= combinedHistory.length - 1;
+  document.getElementById("redoButton").disabled = combinedHistoryIndex <= 0;
 }
 
 /* async function syncCanvasToPixelGrid() {
@@ -957,8 +866,6 @@ async function syncPixelGridToBrushCanvas() {
 
   brushPixelGridHistory[brushHistoryIndex] = Array.from({length: CANVAS_WIDTH},
       (_elX, x) => Array.from({length: CANVAS_HEIGHT}, (_elY, y) => {
-    // return previousPixelGrid[x]?.[y];
-
     const index = (y * CANVAS_WIDTH + x) * 4;
     // TODO - support other colors?
     // const r = data[index];
@@ -978,75 +885,12 @@ async function syncPixelGridToBrushCanvas() {
 
     // TODO - support other colors?
     if (previousPixelGrid[x][y] && !pixel || pixel && !previousPixelGrid[x][y]
-          || pixel?.a !== previousPixelGrid[x][y]?.a) {
+        || pixel?.a !== previousPixelGrid[x][y]?.a) {
       brushPixelsChanged = true;
     }
 
     return pixel;
   }));
-
-  // const pixelGrid = getBrushPixelGrid();
-  // const brushRadius = Math.ceil((getToolbarData().brushSize + 2) / 2);
-
-  // let counter = Math.floor(-DELAY_THRESHOLD / (brushRadius * 0.1));
-
-  // for (const {x, y} of allBrushstrokePoints) {
-  //   for (let i = -brushRadius; i <= brushRadius; i++) {
-  //     for (let j = -brushRadius; j <= brushRadius; j++) {
-  //       const pointX = x + i;
-  //       const pointY = y + j;
-
-  //       if (pointX < 0 || pointX >= canvas.width || pointY < 0 || pointY >= canvas.height) {
-  //         continue;
-  //       }
-
-  //       const index = getImageDataIndex(pointX, pointY, canvas.width);
-  //       let a = data[index + 3] / 255;
-
-  //       if (a > 0) {
-  //         const pixel = {x: pointX, y: pointY, h: 0, s: 0, l: 0, a: Math.max(a, pixelGrid[pointX]?.[pointY]?.a || 0)};
-  //         pixelGrid[pointX][pointY] = pixel;
-  //       }
-  //     }
-  //   }
-
-  //   if (counter % DELAY_THRESHOLD === 0) {
-  //     // console.log("awaiting");
-  //     await step();
-  //   }
-
-  //   counter++;
-  // }
-
-  // for (let i = 0; i < CANVAS_WIDTH; i++) {
-  //   for (let j = 0; j < CANVAS_HEIGHT; j++) {
-  //     const index = (j * CANVAS_WIDTH + i) * 4;
-  //     // const r = data[index];
-  //     // const g = data[index + 1];
-  //     // const b = data[index + 2];
-  //     const a = data[index + 3] / 255;
-
-  //     // let {h, s, l} = rgb2hsl(r, g, b);
-
-  //     // if (a > 0.2 && l < 0.5) {
-  //     //   const pixel = {x: i, y: j, h: 0, s: 0, l: 0};
-  //     //   pixelGrid[i][j] = pixel;
-  //     //   drawPixel(pixel, getBrushCanvas());
-  //     // }
-
-  //     // TODO - support other colors?
-  //     if (a > 0) {
-  //       const pixel = {x: i, y: j, h: 0, s: 0, l: 0, a};
-  //       pixelGrid[i][j] = pixel;
-  //     }
-
-  //     if (counter % DELAY_THRESHOLD === 0) {
-  //       await step();
-  //     }
-
-  //     counter++;
-  //   }
-  // }
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -1057,6 +901,8 @@ function resetCanvas() {
 
   stopGrowth();
 
+  let historyType = "";
+
   if (getFillPixelGrid().flat().some(pixel => pixel)) {
     storeFillHistory();
     setNewFillPixelGrid();
@@ -1064,12 +910,18 @@ function resetCanvas() {
     const fillContext = fillCanvas.getContext("2d", {willReadFrequently: true});
     fillContext.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     fillImageDataHistory.unshift(fillContext.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT));
+    historyType = "fill";
   }
 
   if (getBrushPixelGrid().flat().some(pixel => pixel)) {
     storeBrushHistory();
     setNewBrushPixelGrid();
     getBrushCanvas().getContext("2d").clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    historyType = historyType === "fill" ? "both" : "brush";
+  }
+
+  if (historyType) {
+    storeCombinedHistory(historyType);
   }
 }
 
@@ -1125,6 +977,11 @@ function handleClick(clickX, clickY, fromMove = false) {
           HUE_MUTATION = toolbarData.hueMutation;
           SATURATION_MUTATION = toolbarData.saturationMutation;
           LIGHTNESS_MUTATION = toolbarData.valueMutation;
+
+          if (!fromMove || !fillPixelsChanged) {
+            storeFillHistory();
+            storeCombinedHistory("fill");
+          }
         }
 
         grow(x, y);
@@ -1132,11 +989,22 @@ function handleClick(clickX, clickY, fromMove = false) {
         stopGrowth();
       }
     } else if (selectedTool === "unfill") {
-      if (erasingOutlineForMousePress == null) {
-        erasingOutlineForMousePress = !!getBrushPixelGrid()[x][y];
-      }
-
       if (getFillPixelGrid()[x][y]?.a || getBrushPixelGrid()[x][y]?.a) {
+        if (erasingOutlineForMousePress == null) {
+          erasingOutlineForMousePress = !!getBrushPixelGrid()[x][y];
+        }
+
+        if (!growthActive) {
+          if (!fromMove || (!fillPixelsChanged && !brushPixelsChanged)) {
+            if (erasingOutlineForMousePress) {
+              storeBrushHistory();
+            }
+
+            storeFillHistory();
+            storeCombinedHistory(erasingOutlineForMousePress ? "both" : "fill");
+          }
+        }
+
         grow(x, y, true, erasingOutlineForMousePress);
       } else if (!fromMove && !isFilling) {
         stopGrowth();
@@ -1351,6 +1219,7 @@ function onCanvasMouseDown(event) {
     if (selectedTool === "brush") {
       stopGrowth();
       storeBrushHistory();
+      storeCombinedHistory("brush");
       brushPixelsChanged = false;
       isDrawing = true;
       addBrushstroke(x, y);
@@ -1359,12 +1228,6 @@ function onCanvasMouseDown(event) {
           && y >= 0 && y < CANVAS_HEIGHT)) {
         stopGrowth();
       } else {
-        if (!growthActive) {
-          // In case of erasing outline
-          storeBrushHistory();
-          storeFillHistory();
-        }
-
         isFilling = true;
       }
     }
@@ -1375,23 +1238,8 @@ function onCanvasMouseDown(event) {
   setCssVar('--toolbar-pointer-events', 'none');
 }
 
-// TODO
-/* function finishBrushstrokes() {
-  if (isDrawing && previousBrushstrokePoints.length) {
-    const context = getBrushCanvas().getContext("2d");
-
-    for (let i = 0; i < BRUSH_STROKE_REPEATS; i++) {
-      addBrushstroke(previousBrushstrokePoints[0].x, previousBrushstrokePoints[0].y, true);
-    }
-
-    previousBrushstrokePoints = [];
-    // allBrushstrokePoints = [];
-  }
-} */
-
 async function finishDrawing() {
   if (isDrawing) {
-    // finishBrushstrokes();
     isDrawing = false;
 
     if (allBrushstrokePoints.length) {
@@ -1451,9 +1299,7 @@ async function finishDrawing() {
       canvasContext.lineTo(allBrushstrokePoints[allBrushstrokePoints.length - 1].x, allBrushstrokePoints[allBrushstrokePoints.length - 1].y);
       canvasContext.stroke();
 
-      // console.log("Syncing...");
       await syncPixelGridToBrushCanvas();
-      // console.log("Sync done");
       resumeInteraction();
 
       allBrushstrokePoints = [];
@@ -1462,8 +1308,6 @@ async function finishDrawing() {
     if (!brushPixelsChanged) {
       undoBrush(false);
     }
-
-    updateHistoryButtons(); // TODO
   }
 }
 
@@ -1491,11 +1335,18 @@ function onCanvasMouseUp(event) {
   // event.button is 0 for the primary button (left click)
   if (event.button === 0) {
     finishDrawing();
-    stopFilling();
+
+    if (erasingOutlineForMousePress == null) {
+      // No stored fill history to undo
+      isFilling = false;
+    } else {
+      stopFilling();
+    }
 
     if (interactive && clickTimeoutId) {
       clearTimeout(clickTimeoutId);
       clickTimeoutId = null;
+
       handleClick(event.x, event.y);
     }
   }
@@ -1541,6 +1392,7 @@ function onCanvasTouchStart(event) {
         event.preventDefault();
         stopGrowth();
         storeBrushHistory();
+        storeCombinedHistory("brush");
         brushPixelsChanged = false;
         isDrawing = true;
         addBrushstroke(x, y);
@@ -1549,12 +1401,6 @@ function onCanvasTouchStart(event) {
             && y >= 0 && y < CANVAS_HEIGHT)) {
           stopGrowth();
         } else {
-          if (!growthActive) {
-            // In case of erasing outline
-            storeBrushHistory();
-            storeFillHistory();
-          }
-
           isFilling = true;
         }
       }
@@ -1600,7 +1446,14 @@ function onCanvasTouchEnd(event) {
 
     if (event.touches.length === 0) {
       finishDrawing();
-      stopFilling();
+
+      if (erasingOutlineForMousePress == null) {
+        // No stored fill history to undo
+        isFilling = false;
+      } else {
+        stopFilling();
+      }
+
       setCssVar('--toolbar-pointer-events', 'all');
 
       const toolbar = document.getElementById("toolbar");
@@ -1609,6 +1462,7 @@ function onCanvasTouchEnd(event) {
       if (interactive && clickTimeoutId) {
         clearTimeout(clickTimeoutId);
         clickTimeoutId = null;
+
         handleClick(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
       }
     }
@@ -1684,14 +1538,17 @@ function stopGrowth() {
         undoFill(false);
       }
 
-      if (!brushPixelsChanged) {
+      fillPixelsChanged = false;
+
+      if (erasingOutlineForMousePress && !brushPixelsChanged) {
         undoBrush(false);
       }
 
-      updateHistoryButtons(); // TODO
+      erasingOutlineForMousePress = null;
+      brushPixelsChanged = false;
     }
 
-    drawFillImageData(); // TODO
+    drawFillImageData();
   }
 }
 
@@ -1704,15 +1561,15 @@ function stopFilling() {
         undoFill(false);
       }
 
+      fillPixelsChanged = false;
+
       if (erasingOutlineForMousePress && !brushPixelsChanged) {
         undoBrush(false);
       }
 
-      updateHistoryButtons(); // TODO
-      drawFillImageData(); // TODO
+      erasingOutlineForMousePress = null;
+      brushPixelsChanged = false;
     }
-
-    erasingOutlineForMousePress = null;
   }
 }
 
@@ -1738,6 +1595,7 @@ function generateEllipsesPattern() {
 
   stopGrowth();
   storeBrushHistory();
+  storeCombinedHistory("brush");
 
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
@@ -1785,6 +1643,7 @@ function generateRectanglesPattern() {
 
   stopGrowth();
   storeBrushHistory();
+  storeCombinedHistory("brush");
 
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
@@ -1831,6 +1690,7 @@ function generateDiamondsPattern() {
 
   stopGrowth();
   storeBrushHistory();
+  storeCombinedHistory("brush");
 
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
@@ -1885,6 +1745,7 @@ function generateDiamondsPattern() {
 
   stopGrowth();
   storeBrushHistory();
+  storeCombinedHistory("brush");
 
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
@@ -1934,6 +1795,7 @@ function generateDiamondsPattern() {
 function imageTo2DArray(image) {
   stopGrowth();
   storeBrushHistory();
+  storeCombinedHistory("brush");
 
   fillPixelsChanged = false;
   brushPixelsChanged = false;
@@ -2050,6 +1912,8 @@ function init() {
 
   brushPixelGridHistory.unshift(Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT})));
   brushCanvasHistory.unshift(brushCanvas);
+
+  combinedHistory.unshift("");
 
   setCssVar('--canvas-width', `${CANVAS_WIDTH}px`);
   setCssVar('--canvas-height', `${CANVAS_HEIGHT}px`);
@@ -2347,17 +2211,17 @@ canvas {
         <div>
           <label aria-label="Brush" title="Brush">
             🖌️
-            <input type="radio" name="tool" value="brush" onchange="onToolChange(event)" checked />
+            <input type="radio" name="tool" value="brush" checked />
           </label>
 
           <label aria-label="Fill" title="Fill">
             🎆
-            <input type="radio" name="tool" value="fill" onchange="onToolChange(event)" />
+            <input type="radio" name="tool" value="fill" />
           </label>
 
           <label aria-label="Unfill" title="Unfill">
             🧼
-            <input type="radio" name="tool" value="unfill" onchange="onToolChange(event)" />
+            <input type="radio" name="tool" value="unfill" />
           </label>
         </div>
 
