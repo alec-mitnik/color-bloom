@@ -1961,14 +1961,15 @@ function init() {
   }
 }
 
-body, html {
+html, body, main {
   margin: 0;
   padding: 0;
+  width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
-body, #contentWrapper {
+body, main, #contentWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2207,148 +2208,150 @@ canvas {
 </head>
 
 <body onload="init()">
-  <form id="toolbar" aria-label="Toolbar">
-    <div class="outer-menu">
-      <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()">👁️</button>
+  <main>
+    <form id="toolbar" aria-label="Toolbar">
+      <div class="outer-menu">
+        <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()">👁️</button>
 
-      <div class="menu">
-        <div>
-          <label aria-label="Brush" title="Brush">
-            🖌️
-            <input type="radio" name="tool" value="brush" checked />
-          </label>
+        <div class="menu">
+          <div role="radiogroup" aria-label="Tools">
+            <label aria-label="Brush" title="Brush">
+              🖌️
+              <input type="radio" name="tool" value="brush" checked />
+            </label>
 
-          <label aria-label="Fill" title="Fill">
-            🎆
-            <input type="radio" name="tool" value="fill" />
-          </label>
+            <label aria-label="Fill" title="Fill">
+              🎆
+              <input type="radio" name="tool" value="fill" />
+            </label>
 
-          <label aria-label="Unfill" title="Unfill">
-            🧼
-            <input type="radio" name="tool" value="unfill" />
-          </label>
+            <label aria-label="Unfill" title="Unfill">
+              🧼
+              <input type="radio" name="tool" value="unfill" />
+            </label>
+          </div>
+
+          <div class="collapsible">
+            <label id="toggle-guidelines" aria-label="Toggle Guidelines" title="Toggle Guidelines">
+              📏
+              <input type="checkbox" />
+            </label>
+
+            <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">🎯</button>
+
+            <label>
+              Canvas Scale
+              <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
+                  oninput="onCanvasScaleValueChange(event.currentTarget.value, 'canvasScaleValue')" />
+              <span id="canvasScaleValue">50%</span>
+            </label>
+
+            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()">💬</button>
+
+            <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()">📥</button>
+          </div>
+
+          <div>
+            <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()">⬜</button>
+
+            <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled>↩️</button>
+
+            <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled>↪️</button>
+          </div>
         </div>
 
-        <div class="collapsible">
-          <label id="toggle-guidelines" aria-label="Toggle Guidelines" title="Toggle Guidelines">
-            📏
-            <input type="checkbox" />
-          </label>
+        <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse">
+          <input type="checkbox" onchange="toggleMenuCollapse(event)" />
+        </label>
+      </div>
 
-          <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">🎯</button>
+      <div id="brush-menu" class="submenu collapsible" role="group" aria-label="Brush Submenu">
+        <div>
+          <label>
+            Brush Size
+            <input type="range" name="brushSize" min="5" max="100" value="15" step="1"
+                oninput="onRangeValueChange(event, 'brushSizeValue', false)" />
+            <span id="brushSizeValue">15</span>
+          </label>
 
           <label>
-            Canvas Scale
-            <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
-                oninput="onCanvasScaleValueChange(event.currentTarget.value, 'canvasScaleValue')" />
-            <span id="canvasScaleValue">50%</span>
+            Smoothing
+            <input type="range" name="smoothing" min="0" max="1" value="0.25" step="0.05"
+                oninput="onRangeValueChange(event, 'smoothingValue')" />
+            <span id="smoothingValue">25%</span>
           </label>
-
-          <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()">💬</button>
-
-          <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()">📥</button>
         </div>
 
         <div>
-          <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()">⬜</button>
+          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()">⚫</button>
 
-          <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled>↩️</button>
+          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()">⬛</button>
 
-          <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled>↪️</button>
+          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()">🔷</button>
+        </div>
+
+        <div>
+          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')">🌹</button>
+
+          <!-- <button type="button" aria-label="Add Christmas Tree Template" title="Add Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">🎄</button>
+
+          <button type="button" aria-label="Add Gears Template" title="Add Gears Template" onclick="loadTemplate('gears.jpg')">⚙️</button> -->
+
+          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')">🌴</button>
         </div>
       </div>
 
-      <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse">
-        <input type="checkbox" onchange="toggleMenuCollapse(event)" />
-      </label>
+      <div id="fill-menu" class="submenu collapsible" role="group" aria-label="Fill Submenu">
+        <label aria-label="Color for Fill" title="Color for Fill">
+          <span style="visibility: hidden";>🎨</span>
+          <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
+        </label>
+
+        <div>
+          <label>
+            Hue Variance
+            <input type="range" name="hueMutation" min="0" max="1" step="0.01" value="0.5"
+                oninput="onRangeValueChange(event, 'hueMutationValue')" />
+            <span id="hueMutationValue">50%</span>
+          </label>
+
+          <label>
+            Saturation Variance
+            <input type="range" name="saturationMutation" min="0" max="1" step="0.01" value="0.1"
+                oninput="onRangeValueChange(event, 'saturationMutationValue')" />
+            <span id="saturationMutationValue">10%</span>
+          </label>
+
+          <label>
+            Lightness Variance
+            <input type="range" name="valueMutation" min="0" max="1" step="0.01" value="0.5"
+                oninput="onRangeValueChange(event, 'lightnessMutationValue')" />
+            <span id="lightnessMutationValue">50%</span>
+          </label>
+        </div>
+      </div>
+    </form>
+
+    <div
+      id="contentWrapper"
+      onmousedown="onCanvasMouseDown(event)"
+      ontouchstart="onCanvasTouchStart(event)"
+      onmouseup="onCanvasMouseUp(event)"
+      ontouchend="onCanvasTouchEnd(event)"
+      ontouchcancel="onCanvasTouchEnd(event)"
+      onmouseenter="onCanvasMouseEnter(event)"
+      onmouseleave="onCanvasMouseLeave(event)"
+      ontouchmove="onCanvasTouchMove(event)"
+      onwheel="onCanvasScroll(event)"
+      oncontextmenu="onContextMenu(event)"
+    >
+      <div class="guide vertical center"></div>
+      <div class="guide horizontal center"></div>
+      <div class="guide vertical cursor"></div>
+      <div class="guide horizontal cursor"></div>
+
+      <div id="canvasWrapper"></div>
     </div>
-
-    <div id="brush-menu" class="submenu collapsible" role="group" aria-label="Brush Submenu">
-      <div>
-        <label>
-          Brush Size
-          <input type="range" name="brushSize" min="5" max="100" value="15" step="1"
-              oninput="onRangeValueChange(event, 'brushSizeValue', false)" />
-          <span id="brushSizeValue">15</span>
-        </label>
-
-        <label>
-          Smoothing
-          <input type="range" name="smoothing" min="0" max="1" value="0.25" step="0.05"
-              oninput="onRangeValueChange(event, 'smoothingValue')" />
-          <span id="smoothingValue">25%</span>
-        </label>
-      </div>
-
-      <div>
-        <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()">⚫</button>
-
-        <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()">⬛</button>
-
-        <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()">🔷</button>
-      </div>
-
-      <div>
-        <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')">🌹</button>
-
-        <!-- <button type="button" aria-label="Add Christmas Tree Template" title="Add Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">🎄</button>
-
-        <button type="button" aria-label="Add Gears Template" title="Add Gears Template" onclick="loadTemplate('gears.jpg')">⚙️</button> -->
-
-        <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')">🌴</button>
-      </div>
-    </div>
-
-    <div id="fill-menu" class="submenu collapsible" role="group" aria-label="Fill Submenu">
-      <label aria-label="Color for Fill" title="Color for Fill">
-        <span style="visibility: hidden";>🎨</span>
-        <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
-      </label>
-
-      <div>
-        <label>
-          Hue Variance
-          <input type="range" name="hueMutation" min="0" max="1" step="0.01" value="0.5"
-              oninput="onRangeValueChange(event, 'hueMutationValue')" />
-          <span id="hueMutationValue">50%</span>
-        </label>
-
-        <label>
-          Saturation Variance
-          <input type="range" name="saturationMutation" min="0" max="1" step="0.01" value="0.1"
-              oninput="onRangeValueChange(event, 'saturationMutationValue')" />
-          <span id="saturationMutationValue">10%</span>
-        </label>
-
-        <label>
-          Lightness Variance
-          <input type="range" name="valueMutation" min="0" max="1" step="0.01" value="0.5"
-              oninput="onRangeValueChange(event, 'lightnessMutationValue')" />
-          <span id="lightnessMutationValue">50%</span>
-        </label>
-      </div>
-    </div>
-  </form>
-
-  <div
-    id="contentWrapper"
-    onmousedown="onCanvasMouseDown(event)"
-    ontouchstart="onCanvasTouchStart(event)"
-    onmouseup="onCanvasMouseUp(event)"
-    ontouchend="onCanvasTouchEnd(event)"
-    ontouchcancel="onCanvasTouchEnd(event)"
-    onmouseenter="onCanvasMouseEnter(event)"
-    onmouseleave="onCanvasMouseLeave(event)"
-    ontouchmove="onCanvasTouchMove(event)"
-    onwheel="onCanvasScroll(event)"
-    oncontextmenu="onContextMenu(event)"
-  >
-    <div class="guide vertical center"></div>
-    <div class="guide horizontal center"></div>
-    <div class="guide vertical cursor"></div>
-    <div class="guide horizontal cursor"></div>
-
-    <div id="canvasWrapper"></div>
-  </div>
+  </main>
 </body>
 </html>
