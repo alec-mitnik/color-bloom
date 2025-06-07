@@ -446,7 +446,7 @@ async function grow(x, y, erase = false, erasingOutline = false) {
     brushPixelsChanged = false;
     fillPixelsChanged = false;
 
-    if (erase === false) {
+    if (!erase) {
       addStartingPixel(x, y);
     } else {
       erasePixel(x, y, erasingOutline);
@@ -990,12 +990,16 @@ function handleClick(clickX, clickY, fromMove = false) {
       }
     } else if (selectedTool === "unfill") {
       if (getFillPixelGrid()[x][y]?.a || getBrushPixelGrid()[x][y]?.a) {
-        if (erasingOutlineForMousePress == null) {
+        const fillingNotStarted = erasingOutlineForMousePress == null;
+
+        if (fillingNotStarted) {
           erasingOutlineForMousePress = !!getBrushPixelGrid()[x][y];
+        } else if (erasingOutlineForMousePress && !getBrushPixelGrid()[x][y]?.a) {
+          return;
         }
 
         if (!growthActive) {
-          if (!fromMove || (!fillPixelsChanged && !brushPixelsChanged)) {
+          if (fillingNotStarted || (!fillPixelsChanged && !brushPixelsChanged)) {
             if (erasingOutlineForMousePress) {
               storeBrushHistory();
             }
@@ -2203,7 +2207,7 @@ canvas {
 </head>
 
 <body onload="init()">
-  <form id="toolbar">
+  <form id="toolbar" aria-label="Toolbar">
     <div class="outer-menu">
       <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()">👁️</button>
 
@@ -2240,9 +2244,9 @@ canvas {
             <span id="canvasScaleValue">50%</span>
           </label>
 
-          <button id="shareButton" type="button" aria-label="Share Image" title="Share Image" onclick="share()">💬</button>
+          <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()">💬</button>
 
-          <button id="downloadButton" type="button" aria-label="Download Image" title="Download Image" onclick="download()">📥</button>
+          <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()">📥</button>
         </div>
 
         <div>
@@ -2259,7 +2263,7 @@ canvas {
       </label>
     </div>
 
-    <div id="brush-menu" class="submenu collapsible">
+    <div id="brush-menu" class="submenu collapsible" role="group" aria-label="Brush Submenu">
       <div>
         <label>
           Brush Size
@@ -2295,7 +2299,7 @@ canvas {
       </div>
     </div>
 
-    <div id="fill-menu" class="submenu collapsible">
+    <div id="fill-menu" class="submenu collapsible" role="group" aria-label="Fill Submenu">
       <label aria-label="Color for Fill" title="Color for Fill">
         <span style="visibility: hidden";>🎨</span>
         <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
