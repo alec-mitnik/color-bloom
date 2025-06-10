@@ -9,13 +9,12 @@
 "use strict"
 
 /* TODO:
- * - Add eraser brush, or maybe just add eraser toggle to both brush and fill
  * - Add color selection for brush
  * - Support width varying by speed of strokes or pressure of touch/stylus
  * - Support min/max thickness settings for generated patterns
  * - Support custom canvas sizes
  * - Support uploading own images as templates
- * - Add tip button
+ * - Add link to profile
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
  */
 
@@ -44,7 +43,7 @@ let fillCanvasHistory = [];
 let brushCanvasHistory = [];
 let fillHistoryIndex = 0;
 let brushHistoryIndex = 0;
-let branches = [];
+let blooms = new Map();
 let growthActive = false;
 let erasingOutlineForMousePress;
 let interactive = true;
@@ -172,11 +171,11 @@ function randIndex(arr, forSplice = false) {
   return Math.floor(Math.random() * (arr.length + (forSplice ? 1 : 0)));
 }
 
-/* function randEl(arr) {
+function randEl(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function removeEl(arr, el) {
+/* function removeEl(arr, el) {
   return arr.splice(arr.indexOf(el), 1)[0];
 }
 
@@ -209,7 +208,7 @@ function getColorString(h, s, l, a = 1) {
   context.fillRect(pixel.x, pixel.y, 1, 1);
 } */
 
-function addFillPixel(x, y, h, s, l) {
+function addFillPixel(x, y, h, s, l, startingPixel = undefined) {
   const fillPixelGrid = getFillPixelGrid();
   const existingPixel = fillPixelGrid[x][y];
   let pixelToDraw = {x, y, h, s, l};
@@ -219,7 +218,7 @@ function addFillPixel(x, y, h, s, l) {
   }
 
   // The pixel grid data needs to reflect the original color so that branches stemming from it won't be diluted.
-  // Allow brushstroke to be distinguished for unfill TODO - unnecessary now?
+  // Allow brushstroke to be distinguished for erase TODO - unnecessary now?
   const pixel = {x, y, h, s, l: Math.max(l, 0.01), a: 1};
   fillPixelGrid[x][y] = pixel;
   fillPixelsChanged = true;
@@ -229,11 +228,17 @@ function addFillPixel(x, y, h, s, l) {
   assignImageDataPixel(fillImageData, pixelToDraw);
 
   if (!countsAsOutlineAt(x, y)) {
-    branches.splice(randIndex(branches, true), 0, pixel);
+    if (blooms.has(startingPixel)) {
+      const branches = blooms.get(startingPixel);
+      branches.splice(randIndex(branches, true), 0, pixel);
+      blooms.set(startingPixel, branches);
+    } else {
+      blooms.set(pixel, [pixel]);
+    }
   }
 }
 
-function erasePixel(x, y, erasingOutline) {
+function erasePixel(x, y, erasingOutline, startingPixel = undefined) {
   const fillPixelGrid = getFillPixelGrid();
   // const fillCanvas = getFillCanvas();
   // const fillCanvasContext = fillCanvas.getContext("2d");
@@ -275,7 +280,13 @@ function erasePixel(x, y, erasingOutline) {
   }
 
   if (erasingOutline || !countsAsOutlineAt(x, y)) {
-    branches.splice(randIndex(branches, true), 0, {x, y});
+    if (blooms.has(startingPixel)) {
+      const branches = blooms.get(startingPixel);
+      branches.splice(randIndex(branches, true), 0, {x, y});
+      blooms.set(startingPixel, branches);
+    } else {
+      blooms.set({x, y}, [{x, y}]);
+    }
   }
 }
 
@@ -376,37 +387,54 @@ function mutateLightness(l, s) {
 }
 
 function growBranch(erase = false, erasingOutline = false) {
-  // const randBranch = randEl(branches);
-  const randBranch = branches.shift();
+  const [startingPixel, randBranch] = randEl([...blooms.entries()]);
+  const randBranchPixel = randBranch.shift();
+  const sizeLimit = parseInt(erase ? getToolbarData().eraseSize : getToolbarData().fillSize) / 2;
 
   const neighbors = [
-    {x: randBranch.x - 1, y: randBranch.y},
-    {x: randBranch.x + 1, y: randBranch.y},
-    {x: randBranch.x, y: randBranch.y - 1},
-    {x: randBranch.x, y: randBranch.y + 1},
+    {x: randBranchPixel.x - 1, y: randBranchPixel.y},
+    {x: randBranchPixel.x + 1, y: randBranchPixel.y},
+    {x: randBranchPixel.x, y: randBranchPixel.y - 1},
+    {x: randBranchPixel.x, y: randBranchPixel.y + 1},
   ];
 
   for (const neighbor of neighbors) {
     if (neighbor.x >= 0 && neighbor.x < CANVAS_WIDTH
         && neighbor.y >= 0 && neighbor.y < CANVAS_HEIGHT) {
+
+      if (!isNaN(sizeLimit)
+          && ((neighbor.x - startingPixel.x) ** 2 + (neighbor.y - startingPixel.y) ** 2) > sizeLimit ** 2) {
+        // This gives perfect circles (with pixelated edges)
+        // continue;
+
+        // This gives more naturalistic splotches
+        blooms.delete(startingPixel);
+        return;
+      }
+
       if (!erase) {
         if (!(getFillPixelGrid()[neighbor.x][neighbor.y]?.a === 1) && !countsAsOutlineAt(neighbor.x, neighbor.y)) {
           addFillPixel(
             neighbor.x,
             neighbor.y,
-            mutateHue(randBranch.h),
-            mutateSaturation(randBranch.s),
-            mutateLightness(randBranch.l, randBranch.s),
+            mutateHue(randBranchPixel.h),
+            mutateSaturation(randBranchPixel.s),
+            mutateLightness(randBranchPixel.l, randBranchPixel.s),
+            startingPixel,
           );
         }
       } else {
         if ((erasingOutline && getBrushPixelGrid()[neighbor.x][neighbor.y])
             || (!erasingOutline && getFillPixelGrid()[neighbor.x][neighbor.y])) {
-          erasePixel(neighbor.x, neighbor.y, erasingOutline);
+          erasePixel(neighbor.x, neighbor.y, erasingOutline, startingPixel);
         }
       }
     }
   };
+
+  if (!blooms.get(startingPixel).length) {
+    blooms.delete(startingPixel);
+  }
 }
 
 function countsAsOutlineAt(x, y) {
@@ -455,7 +483,7 @@ async function grow(x, y, erase = false, erasingOutline = false) {
     growthActive = true;
     let growths = 1;
 
-    while (branches.length) {
+    while (blooms.size) {
       growBranch(erase, erasingOutline);
 
       if (growths % (DELAY_THRESHOLD * 1) === 0) {
@@ -612,6 +640,7 @@ function storeCombinedHistory(historyType) {
     brushCanvas.remove();
   }
 
+  // console.log(combinedHistoryIndex, combinedHistory);
   updateHistoryButtons();
 }
 
@@ -958,6 +987,14 @@ function getCanvasCoordinates(mouseX, mouseY) {
   return {x, y};
 }
 
+function convertToMouseCoordinates(canvasX, canvasY) {
+  const canvas = getFillCanvas();
+  const scale = getCssVar('--canvas-scale');
+
+  const {x, y} = canvas.getBoundingClientRect();
+  return {x: x + canvasX * scale, y: y + canvasY * scale};
+}
+
 function handleClick(clickX, clickY, fromMove = false) {
   let {x, y} = getCanvasCoordinates(clickX, clickY);
 
@@ -978,17 +1015,37 @@ function handleClick(clickX, clickY, fromMove = false) {
           SATURATION_MUTATION = toolbarData.saturationMutation;
           LIGHTNESS_MUTATION = toolbarData.valueMutation;
 
-          if (!fromMove || !fillPixelsChanged) {
+          if (!fillPixelsChanged) {
             storeFillHistory();
             storeCombinedHistory("fill");
           }
         }
 
         grow(x, y);
-      } else if (!fromMove && !isFilling) {
+      } else if (!fromMove && !isFilling && growthActive) {
         stopGrowth();
+      } else if (!growthActive) {
+        // Give leeway equal to have the fill size
+        const fillSize = parseInt(toolbarData.fillSize) / 2;
+
+        if (!isNaN(fillSize)) {
+          const halfSize = Math.ceil(fillSize * 0.5);
+
+          for (let i = Math.max(0, x - halfSize); i <= Math.min(CANVAS_WIDTH - 1, x + halfSize); i++) {
+            for (let j = Math.max(0, y - halfSize); j <= Math.min(CANVAS_HEIGHT - 1, y + halfSize); j++) {
+              // If point is not further from (x, y) than halfSize
+              if (Math.pow(i - x, 2) + Math.pow(j - y, 2) <= Math.pow(halfSize, 2)) {
+                if (!getFillPixelGrid()[i][j]?.a && !countsAsOutlineAt(i, j)) {
+                  const {x: mouseX, y: mouseY} = convertToMouseCoordinates(i, j);
+                  handleClick(mouseX, mouseY, fromMove);
+                  return;
+                }
+              }
+            }
+          }
+        }
       }
-    } else if (selectedTool === "unfill") {
+    } else if (selectedTool === "erase") {
       if (getFillPixelGrid()[x][y]?.a || getBrushPixelGrid()[x][y]?.a) {
         const fillingNotStarted = erasingOutlineForMousePress == null;
 
@@ -1010,8 +1067,28 @@ function handleClick(clickX, clickY, fromMove = false) {
         }
 
         grow(x, y, true, erasingOutlineForMousePress);
-      } else if (!fromMove && !isFilling) {
+      } else if (!fromMove && !isFilling && growthActive) {
         stopGrowth();
+      } else if (!growthActive) {
+        // Give leeway equal to have the erase size
+        const eraseSize = parseInt(toolbarData.eraseSize) / 2;
+
+        if (!isNaN(eraseSize)) {
+          const halfSize = Math.ceil(eraseSize * 0.5);
+
+          for (let i = Math.max(0, x - halfSize); i <= Math.min(CANVAS_WIDTH - 1, x + halfSize); i++) {
+            for (let j = Math.max(0, y - halfSize); j <= Math.min(CANVAS_HEIGHT - 1, y + halfSize); j++) {
+              // If point is not further from (x, y) than halfSize
+              if (Math.pow(i - x, 2) + Math.pow(j - y, 2) <= Math.pow(halfSize, 2)) {
+                if (getFillPixelGrid()[i][j]?.a || getBrushPixelGrid()[i][j]?.a) {
+                  const {x: mouseX, y: mouseY} = convertToMouseCoordinates(i, j);
+                  handleClick(mouseX, mouseY, fromMove);
+                  return;
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -1343,6 +1420,10 @@ function onCanvasMouseUp(event) {
     if (erasingOutlineForMousePress == null) {
       // No stored fill history to undo
       isFilling = false;
+
+      if (!growthActive) {
+        fillPixelsChanged = false;
+      }
     } else {
       stopFilling();
     }
@@ -1454,6 +1535,10 @@ function onCanvasTouchEnd(event) {
       if (erasingOutlineForMousePress == null) {
         // No stored fill history to undo
         isFilling = false;
+
+        if (!growthActive) {
+          fillPixelsChanged = false;
+        }
       } else {
         stopFilling();
       }
@@ -1535,7 +1620,7 @@ function onContextMenu(event) {
 function stopGrowth() {
   if (growthActive) {
     growthActive = false;
-    branches = [];
+    blooms = new Map();
 
     if (!isFilling) {
       if (!fillPixelsChanged) {
@@ -1988,8 +2073,8 @@ body, main, #contentWrapper {
 
   .guide {
     position: absolute;
-    background: black;
-    opacity: 0.1;
+    background: #ddd;
+    opacity: 0.3;
 
     &.vertical {
       transform: translateX(var(--canvas-offset-x));
@@ -2010,8 +2095,8 @@ body, main, #contentWrapper {
         display: none;
       }
 
-      background-color: #0000ff;
-      opacity: 0.1;
+      background-color: #9999ff;
+      opacity: 0.3;
       top: -1px;
       left: -1px;
 
@@ -2093,8 +2178,9 @@ canvas {
     align-items: flex-start;
     flex-wrap: nowrap;
 
-    &:not(:has(input[value=brush]:checked)) ~ #brush-menu,
-    &:not(:has(input[value=fill]:checked)) ~ #fill-menu {
+    &:not(:has(input[value=brush]:checked)) ~ .brush-menu,
+    &:not(:has(input[value=fill]:checked)) ~ .fill-menu,
+    &:not(:has(input[value=erase]:checked)) ~ .erase-menu {
       display: none;
     }
   }
@@ -2171,6 +2257,10 @@ canvas {
     justify-content: center;
   }
 
+  label:has(input:disabled) {
+    opacity: 0.5;
+  }
+
   input:not([type="text"]) {
     &:not(:disabled) {
       cursor: pointer;
@@ -2216,25 +2306,25 @@ canvas {
         <div class="menu">
           <div role="radiogroup" aria-label="Tools">
             <label aria-label="Brush" title="Brush">
-              🖌️
-              <input type="radio" name="tool" value="brush" checked />
+              <span aria-hidden="true">🖌️</span>
+              <input type="radio" name="tool" value="brush" aria-label="Brush" checked />
             </label>
 
             <label aria-label="Fill" title="Fill">
-              🎆
-              <input type="radio" name="tool" value="fill" />
+              <span aria-hidden="true">🎆</span>
+              <input type="radio" name="tool" value="fill" aria-label="Fill" />
             </label>
 
-            <label aria-label="Unfill" title="Unfill">
-              🧼
-              <input type="radio" name="tool" value="unfill" />
+            <label aria-label="Erase" title="Erase">
+              <span aria-hidden="true">🧼</span>
+              <input type="radio" name="tool" value="erase" aria-label="Erase" />
             </label>
           </div>
 
           <div class="collapsible">
-            <label id="toggle-guidelines" aria-label="Toggle Guidelines" title="Toggle Guidelines">
-              📏
-              <input type="checkbox" />
+            <label id="toggle-guidelines" aria-label="Show Guidelines" title="Show Guidelines">
+              <span aria-hidden="true">📏</span>
+            <input type="checkbox" aria-label="Show Guidelines" />
             </label>
 
             <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">🎯</button>
@@ -2265,7 +2355,7 @@ canvas {
         </label>
       </div>
 
-      <div id="brush-menu" class="submenu collapsible" role="group" aria-label="Brush Submenu">
+      <div class="brush-menu submenu collapsible" role="group" aria-label="Brush Submenu">
         <div>
           <label>
             Brush Size
@@ -2301,7 +2391,21 @@ canvas {
         </div>
       </div>
 
-      <div id="fill-menu" class="submenu collapsible" role="group" aria-label="Fill Submenu">
+      <div class="fill-menu submenu collapsible" role="group" aria-label="Fill Submenu">
+        <div>
+          <label id="limitless-fill" aria-label="Limitless Fill" title="Limitless Fill">
+            <span aria-hidden="true">♾️</span>
+            <input type="checkbox" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
+          </label>
+
+          <label>
+            Fill Size
+            <input id="fill-size" type="range" name="fillSize" min="50" max="500" value="200" step="10"
+                oninput="stopGrowth(); onRangeValueChange(event, 'fillSizeValue', false);" disabled />
+            <span id="fillSizeValue">200</span>
+          </label>
+        </div>
+
         <label aria-label="Color for Fill" title="Color for Fill">
           <span style="visibility: hidden";>🎨</span>
           <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
@@ -2327,6 +2431,22 @@ canvas {
             <input type="range" name="valueMutation" min="0" max="1" step="0.01" value="0.5"
                 oninput="onRangeValueChange(event, 'lightnessMutationValue')" />
             <span id="lightnessMutationValue">50%</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="erase-menu submenu collapsible" role="group" aria-label="Erase Submenu">
+        <div>
+          <label id="limitless-erase" aria-label="Limitless Erase" title="Limitless Erase">
+            <span aria-hidden="true">♾️</span>
+            <input type="checkbox" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
+          </label>
+
+          <label>
+            Erase Size
+            <input id="erase-size" type="range" name="eraseSize" min="50" max="500" value="200" step="10"
+                oninput="stopGrowth(); onRangeValueChange(event, 'eraseSizeValue', false);" disabled />
+            <span id="eraseSizeValue">200</span>
           </label>
         </div>
       </div>
