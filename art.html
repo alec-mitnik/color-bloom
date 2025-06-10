@@ -9,12 +9,11 @@
 "use strict"
 
 /* TODO:
- * - Add color selection for brush
- * - Support width varying by speed of strokes or pressure of touch/stylus
- * - Support min/max thickness settings for generated patterns
+ * - Add instructions/tutorial
+ * - Add color selection for brush?
  * - Support custom canvas sizes
- * - Support uploading own images as templates
- * - Add link to profile
+ * - Support uploading own images as templates?
+ * - Support width varying by speed of strokes or pressure of touch/stylus
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
  */
 
@@ -1262,15 +1261,10 @@ function onCanvasTouchMove(event) {
   }
 }
 
-function toggleMenuCollapse(event) {
-  for (const collapsible of document.getElementsByClassName("collapsible")) {
-    collapsible.style.display = event.currentTarget.checked ? "none" : null;
-  }
-}
-
 // eslint-disable-next-line no-unused-vars
 function viewCanvas() {
   document.getElementById("toolbar").classList.add("hidden");
+  document.getElementById("portfolio-link").classList.add("hidden");
 }
 
 function onCanvasMouseDown(event) {
@@ -1305,7 +1299,7 @@ function onCanvasMouseDown(event) {
       isDrawing = true;
       addBrushstroke(x, y);
     } else {
-      if (!(x >= 0 && x < CANVAS_WIDTH
+      if (growthActive && !(x >= 0 && x < CANVAS_WIDTH
           && y >= 0 && y < CANVAS_HEIGHT)) {
         stopGrowth();
       } else {
@@ -1411,7 +1405,10 @@ function onCanvasMouseUp(event) {
   document.getElementById("contentWrapper").classList.remove("positioning");
 
   const toolbar = document.getElementById("toolbar");
-  setTimeout(() => toolbar.classList.remove("hidden"), 50);
+  setTimeout(() => {
+    toolbar.classList.remove("hidden");
+    document.getElementById("portfolio-link").classList.remove("hidden");
+  }, 50);
 
   // event.button is 0 for the primary button (left click)
   if (event.button === 0) {
@@ -1546,7 +1543,10 @@ function onCanvasTouchEnd(event) {
       setCssVar('--toolbar-pointer-events', 'all');
 
       const toolbar = document.getElementById("toolbar");
-      setTimeout(() => toolbar.classList.remove("hidden"), 50);
+      setTimeout(() => {
+        toolbar.classList.remove("hidden");
+        document.getElementById("portfolio-link").classList.remove("hidden");
+      }, 50);
 
       if (interactive && clickTimeoutId) {
         clearTimeout(clickTimeoutId);
@@ -2152,7 +2152,7 @@ canvas {
   border-radius: 10px;
   box-shadow: 0 5px 10px 2px rgba(0, 0, 0, 0.5);
   max-width: calc(100% - 20px);
-  background: rgba(184, 209, 235, 0.9);
+  background: rgba(184, 209, 235) url('./images/so-white.png');
   color: black;
   display: flex;
   flex-direction: column;
@@ -2185,7 +2185,7 @@ canvas {
     }
   }
 
-  &:has(#toggle-guidelines>input:not(:checked)) ~ #contentWrapper .guide {
+  &:has(#show-guidelines>input:not(:checked)) ~ #contentWrapper .guide {
     display: none;
   }
 
@@ -2241,11 +2241,11 @@ canvas {
   }
 
   label#toggle-collapse {
-    &::before {
+    > span::before {
       content: '➖';
     }
 
-    &:has(:checked)::before {
+    &:has(:checked) > span::before {
       content: '➕';
     }
   }
@@ -2289,10 +2289,45 @@ canvas {
     /* Prevent double-tap from zooming in on mobile */
     touch-action: manipulation;
   }
+
+  button, label {
+    > span:first-child {
+      filter: drop-shadow(0 0 1px black);
+    }
+  }
+}
+
+main:has(#toggle-collapse input:checked) .collapsible {
+  display: none;
 }
 
 .hidden {
   display: none !important;
+}
+
+#portfolio-link {
+  position: absolute;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  background-color: rgb(0, 0, 0, 0.25);
+  padding: 6px;
+  border-radius: 99999px;
+  box-shadow: 0 0 4px 0 #f9b70f;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  @media (hover: hover) {
+    &:hover {
+      background: black;
+    }
+  }
+
+  > img {
+    height: 4rem;
+    border-radius: 99999px;
+    pointer-events: none;
+  }
 }
 </style>
 </head>
@@ -2301,7 +2336,9 @@ canvas {
   <main>
     <form id="toolbar" aria-label="Toolbar">
       <div class="outer-menu">
-        <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()">👁️</button>
+        <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()">
+          <span aria-hidden="true">👁️</span>
+        </button>
 
         <div class="menu">
           <div role="radiogroup" aria-label="Tools">
@@ -2322,12 +2359,14 @@ canvas {
           </div>
 
           <div class="collapsible">
-            <label id="toggle-guidelines" aria-label="Show Guidelines" title="Show Guidelines">
+            <label id="show-guidelines" aria-label="Show Guidelines" title="Show Guidelines">
               <span aria-hidden="true">📏</span>
-            <input type="checkbox" aria-label="Show Guidelines" />
+              <input type="checkbox" name="show-guidelines" aria-label="Show Guidelines" />
             </label>
 
-            <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">🎯</button>
+            <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">
+              <span aria-hidden="true">🎯</span>
+            </button>
 
             <label>
               Canvas Scale
@@ -2336,22 +2375,33 @@ canvas {
               <span id="canvasScaleValue">50%</span>
             </label>
 
-            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()">💬</button>
+            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()">
+              <span aria-hidden="true">💬</span>
+            </button>
 
-            <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()">📥</button>
+            <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()">
+              <span aria-hidden="true">📥</span>
+            </button>
           </div>
 
           <div>
-            <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()">⬜</button>
+            <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()">
+              <span aria-hidden="true">⬜</span>
+            </button>
 
-            <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled>↩️</button>
+            <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled>
+              <span aria-hidden="true">↩️</span>
+            </button>
 
-            <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled>↪️</button>
+            <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled>
+              <span aria-hidden="true">↪️</span>
+            </button>
           </div>
         </div>
 
         <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse">
-          <input type="checkbox" onchange="toggleMenuCollapse(event)" />
+          <span aria-hidden="true"></span>
+          <input type="checkbox" name="toggle-collapse" />
         </label>
       </div>
 
@@ -2373,21 +2423,35 @@ canvas {
         </div>
 
         <div>
-          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()">⚫</button>
+          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()">
+            <span aria-hidden="true">⚫</span>
+          </button>
 
-          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()">⬛</button>
+          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()">
+            <span aria-hidden="true">⬛</span>
+          </button>
 
-          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()">🔷</button>
+          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()">
+            <span aria-hidden="true">🔷</span>
+          </button>
         </div>
 
         <div>
-          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')">🌹</button>
+          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')">
+            <span aria-hidden="true">🌹</span>
+          </button>
 
-          <!-- <button type="button" aria-label="Add Christmas Tree Template" title="Add Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">🎄</button>
+          <!-- <button type="button" aria-label="Add Christmas Tree Template" title="Add Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">
+            <span aria-hidden="true">🎄</span>
+          </button>
 
-          <button type="button" aria-label="Add Gears Template" title="Add Gears Template" onclick="loadTemplate('gears.jpg')">⚙️</button> -->
+          <button type="button" aria-label="Add Gears Template" title="Add Gears Template" onclick="loadTemplate('gears.jpg')">
+            <span aria-hidden="true">⚙️</span>
+          </button> -->
 
-          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')">🌴</button>
+          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')">
+            <span aria-hidden="true">🌴</span>
+          </button>
         </div>
       </div>
 
@@ -2395,7 +2459,7 @@ canvas {
         <div>
           <label id="limitless-fill" aria-label="Limitless Fill" title="Limitless Fill">
             <span aria-hidden="true">♾️</span>
-            <input type="checkbox" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
+            <input type="checkbox" name="limitless-fill" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
           </label>
 
           <label>
@@ -2439,7 +2503,7 @@ canvas {
         <div>
           <label id="limitless-erase" aria-label="Limitless Erase" title="Limitless Erase">
             <span aria-hidden="true">♾️</span>
-            <input type="checkbox" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
+            <input type="checkbox" name="limitless-erase" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
           </label>
 
           <label>
@@ -2472,6 +2536,11 @@ canvas {
 
       <div id="canvasWrapper"></div>
     </div>
+
+    <!-- Portfolio Link -->
+    <a id="portfolio-link" class="collapsible" href="https://alec-mitnik.github.io/" target="_blank" rel="author" aria-label="Check out my other projects">
+      <img src="./images/PXL_Avatar_1B.jpg" alt="">
+    </a>
   </main>
 </body>
 </html>
