@@ -1479,7 +1479,7 @@ function onCanvasTouchStart(event) {
         isDrawing = true;
         addBrushstroke(x, y);
       } else {
-        if (!(x >= 0 && x < CANVAS_WIDTH
+        if (growthActive && !(x >= 0 && x < CANVAS_WIDTH
             && y >= 0 && y < CANVAS_HEIGHT)) {
           stopGrowth();
         } else {
