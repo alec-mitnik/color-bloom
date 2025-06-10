@@ -1488,8 +1488,18 @@ function onCanvasTouchStart(event) {
       }
     }
   } else {
+    clearTimeout(clickTimeoutId);
+    clickTimeoutId = null;
+
     finishDrawing();
-    stopFilling();
+
+    if (!fillPixelsChanged) {
+      // No stored fill history to undo
+      isFilling = false;
+    } else {
+      stopFilling();
+    }
+
     document.getElementById("contentWrapper").classList.add("positioning");
 
     let totalDistance = 0, pairCount = 0;
