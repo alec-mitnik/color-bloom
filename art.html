@@ -2086,12 +2086,16 @@ function init() {
         clearTimeout(longPressTimeoutId);
         longPressTimeoutId = null;
 
-        // Prevent any selection that might have started
+        // Clear any text selection that might have been triggered
         window.getSelection().removeAllRanges();
+
+        // Temporarily disable future text selection
+        document.querySelector('dialog#toolbar-option-info-dialog').style.userSelect = 'none';
+        document.body.style.userSelect = 'none';
 
         const iconWrapper = element.querySelector('& > span');
         openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
-      }, 1000);
+      }, 750);
     });
 
     toolTipElement.addEventListener('touchend', (event) => {
@@ -2105,10 +2109,24 @@ function init() {
         }
       }
 
+      // Re-enable text selection
+      document.querySelector('dialog#toolbar-option-info-dialog').style.userSelect = null;
+      document.body.style.userSelect = null;
+
       clearTimeout(longPressTimeoutId);
       longPressTimeoutId = null;
       longPressTouchId = null;
     }, { passive: false });
+
+    toolTipElement.addEventListener('touchcancel', () => {
+      // Re-enable text selection
+      document.querySelector('dialog#toolbar-option-info-dialog').style.userSelect = null;
+      document.body.style.userSelect = null;
+
+      clearTimeout(longPressTimeoutId);
+      longPressTimeoutId = null;
+      longPressTouchId = null;
+    });
   }
 }
 </script>
@@ -2117,14 +2135,14 @@ function init() {
 <body onload="init()" onmousemove="onCanvasMouseMove(event)">
   <!-- Toolbar Info Dialog -->
   <dialog id="toolbar-option-info-dialog" aria-label="Option Info">
-    <div class="modal-backdrop" onclick="closeOptionInfoDialog()"></div>
+    <div class="modal-backdrop" onclick="if (event.target === this) { closeOptionInfoDialog() }">
+      <div class="modal-foreground">
+        <button autofocus class="close-button" aria-label="Close dialog" onclick="closeOptionInfoDialog()">
+          <span aria-hidden="true">❌&#65038;</span>
+        </button>
 
-    <div class="modal-foreground">
-      <button autofocus class="close-button" aria-label="Close dialog" onclick="closeOptionInfoDialog()">
-        <span aria-hidden="true">❌&#65038;</span>
-      </button>
-
-      <div class="modal-content"></div>
+        <div class="modal-content"></div>
+      </div>
     </div>
   </dialog>
 
