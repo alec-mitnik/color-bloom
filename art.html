@@ -17,6 +17,7 @@
 "use strict"
 
 /* TODO:
+ * - Provide context menu trigger alternative for iOS Safari...
  * - Improve speed of simultaneous blooms
  * - Add color selection for brush?
  * - Support stored fill presets?
@@ -2092,13 +2093,13 @@ function init() {
 
   <main>
     <form id="toolbar" aria-label="Toolbar">
-      <p id="toolbar-info" class="collapsible">Right-click or long-press an option for info</p>
+      <p id="toolbar-info" class="collapsible">Right-click an option for info</p>
 
       <div class="outer-menu">
-        <span role="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()"
+        <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()"
             data-description="Hides everything but the canvas until the next interaction.">
           <span aria-hidden="true">👁️</span>
-      </span>
+        </button>
 
         <div class="menu">
           <div role="radiogroup" aria-label="Tools">
@@ -2128,10 +2129,10 @@ function init() {
               <input type="checkbox" name="show-guidelines" aria-label="Show Guidelines" />
             </label>
 
-            <span role="img" aria-label="Reset Scale and Position" title="Reset Scale and Position" onclick="resetScaleAndPosition()"
+            <button type="button" aria-label="Reset Scale and Position" title="Reset Scale and Position" onclick="resetScaleAndPosition()"
                 data-description="Resets the canvas scale and position to their starting values.  In addition to the slider, canvas scale can be adjusted by pinching/spreading on a touchscreen or with the mouse wheel.  Canvas position can be adjusted by dragging with multiple fingers on a touchscreen or while holding the right or middle mouse button.">
               <span aria-hidden="true">🎯</span>
-            </span>
+            </button>
 
             <label>
               Canvas Scale
