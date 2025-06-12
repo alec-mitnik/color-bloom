@@ -2072,6 +2072,43 @@ function init() {
 
       openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
     });
+
+    // iOS Safari doesn't support contextmenu events, so need to implement long-press manually
+    let longPressTimeoutId;
+    let longPressTouchId;
+
+    toolTipElement.addEventListener('touchstart', (event) => {
+      const element = event.currentTarget;
+      longPressTouchId = event.changedTouches[0].identifier;
+
+      clearTimeout(longPressTimeoutId);
+      longPressTimeoutId = setTimeout(() => {
+        clearTimeout(longPressTimeoutId);
+        longPressTimeoutId = null;
+
+        // Prevent any selection that might have started
+        window.getSelection().removeAllRanges();
+
+        const iconWrapper = element.querySelector('& > span');
+        openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
+      }, 1000);
+    });
+
+    toolTipElement.addEventListener('touchend', (event) => {
+      // If the popup was opened by a long-press, prevent the context menu from triggering
+      if (longPressTimeoutId == null && longPressTouchId != null) {
+        for (const touch of event.changedTouches) {
+          if (touch.identifier === longPressTouchId) {
+            event.preventDefault();
+            break;
+          }
+        }
+      }
+
+      clearTimeout(longPressTimeoutId);
+      longPressTimeoutId = null;
+      longPressTouchId = null;
+    }, { passive: false });
   }
 }
 </script>
@@ -2093,7 +2130,7 @@ function init() {
 
   <main>
     <form id="toolbar" aria-label="Toolbar">
-      <p id="toolbar-info" class="collapsible">Right-click an option for info</p>
+      <p id="toolbar-info" class="collapsible">Right-click or long-press an option for info</p>
 
       <div class="outer-menu">
         <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()"

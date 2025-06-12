@@ -203,9 +203,10 @@ canvas {
     font-size: 2rem;
     position: relative;
     border-radius: 8px;
+    user-select: none;
   }
 
-  :has(#toggle-collapse :checked) label:has([value="fill"]:checked) {
+  &:has(#toggle-collapse :checked) label:has([value="fill"]:checked) {
     border-color: var(--selected-fill-color) !important;
   }
 
