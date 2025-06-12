@@ -529,7 +529,7 @@ export function bloomErase({
   maxRadius = NaN,
   speed = NaN,
 } = {}) {
-  if (!blooms.has(spawningElement) || isBlooming(spawningElement)) {
+  if (!blooms.has(spawningElement) || !blooms.get(spawningElement).pixelGrid || isBlooming(spawningElement)) {
     return;
   }
 
@@ -1066,10 +1066,6 @@ export function bloomColor({
     canvas.height = confineToSpawningElement ? height : window.screen.height;
   }
 
-  if (!blooms.get(spawningElement).pixelGrid) {
-    blooms.get(spawningElement).pixelGrid = Array.from({length: canvas.width}, () => Array.from({length: canvas.height}));
-  }
-
   const spawningElementIsBody = spawningElement === document.body;
 
   if (isNaN(bloomX)) {
@@ -1088,6 +1084,10 @@ export function bloomColor({
       bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
           + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
+  }
+
+  if (!blooms.get(spawningElement).pixelGrid) {
+    blooms.get(spawningElement).pixelGrid = Array.from({length: canvas.width}, () => Array.from({length: canvas.height}));
   }
 
   blooms.get(spawningElement).isErasing = false;

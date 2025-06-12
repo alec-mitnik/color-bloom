@@ -1,0 +1,419 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+:root {
+  --toolbar-pointer-events: all;
+  --selected-fill-color: black;
+  --canvas-width: 1920px;
+  --canvas-height: 1200px;
+  --canvas-scale: 0.5;
+  --canvas-offset-x: 0px;
+  --canvas-offset-y: 50px;
+  --mouse-x: -1000px;
+  --mouse-y: -1000px;
+  accent-color: var(--selected-fill-color);
+  font-family: "Port Lligat Sans", sans-serif;
+  font-size: 100%;
+
+  @media (width < 500px) {
+    font-size: 75%;
+  }
+}
+
+html, body, main {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+p, ul {
+  margin: 0;
+}
+
+button {
+  appearance: none;
+  color: inherit;
+  font-family: inherit;
+}
+
+button:not(:disabled), a {
+  cursor: pointer;
+}
+
+button, input {
+  /* Prevent double-tap from zooming in on mobile */
+  touch-action: manipulation;
+}
+
+body, main, #contentWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #313437 url('./images/dark_wood.png');
+}
+
+#contentWrapper {
+  position: relative;
+  touch-action: none;
+  min-width: 100%;
+  min-height: 100%;
+
+  &.positioning {
+    cursor: grabbing;
+  }
+
+  .guide {
+    position: absolute;
+    background: #ddd;
+    opacity: 0.3;
+
+    &.vertical {
+      transform: translateX(var(--canvas-offset-x));
+      top: 0;
+      bottom: 0;
+      width: 2px;
+    }
+
+    &.horizontal {
+      transform: translateY(var(--canvas-offset-y));
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    &.cursor {
+      @media (hover: none) {
+        display: none;
+      }
+
+      background-color: #9999ff;
+      opacity: 0.3;
+      top: -1px;
+      left: -1px;
+
+      &.vertical {
+        transform: translateX(var(--mouse-x));
+      }
+
+      &.horizontal {
+        transform: translateY(var(--mouse-y));
+      }
+    }
+  }
+}
+
+#canvasWrapper {
+  position: relative;
+  width: calc(var(--canvas-width) * var(--canvas-scale));
+  height: calc(var(--canvas-height) * var(--canvas-scale));
+  transform: translate(var(--canvas-offset-x), var(--canvas-offset-y));
+}
+
+canvas {
+  position: absolute;
+  touch-action: none;
+  background: transparent;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+
+  &#background-canvas {
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    background: #e0e0e3 url('images/45degree_fabric.webp');
+    background-clip: content-box;
+    box-shadow: 0 5px 20px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  &.brush-canvas {
+    z-index: 1;
+  }
+}
+
+#contentWrapper, canvas {
+  user-select: none;
+}
+
+#toolbar {
+  pointer-events: var(--toolbar-pointer-events);
+  position: fixed;
+  top: 10px;
+  z-index: 10;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 5px 10px 2px rgba(0, 0, 0, 0.5);
+  max-width: calc(100% - 20px);
+  background: rgba(184, 209, 235) url('./images/so-white.png');
+  color: black;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+
+  &[inert] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  #toolbar-info {
+    margin-bottom: 0.5rem;
+  }
+
+  .outer-menu {
+    align-items: flex-start;
+    flex-wrap: nowrap;
+
+    &:not(:has(input[value=brush]:checked)) ~ .brush-menu,
+    &:not(:has(input[value=fill]:checked)) ~ .fill-menu,
+    &:not(:has(input[value=erase]:checked)) ~ .erase-menu {
+      display: none;
+    }
+  }
+
+  &:has(#show-guidelines>input:not(:checked)) ~ #contentWrapper .guide {
+    display: none;
+  }
+
+  .menu {
+    flex-wrap: wrap-reverse;
+    flex: 1;
+  }
+
+  label:not(:has(input[type="range"])), button {
+    border: 4px solid transparent;
+    background-color: rgb(0, 0, 0, 0.25);
+    background-clip: padding-box;
+    padding: 2px;
+    font-size: 2rem;
+    position: relative;
+    border-radius: 8px;
+  }
+
+  :has(#toggle-collapse :checked) label:has([value="fill"]:checked) {
+    border-color: var(--selected-fill-color) !important;
+  }
+
+  label:not(:has(input[type="range"])) {
+    cursor: pointer;
+
+    &:not(#toggle-collapse):has(:checked) {
+      background-color: black;
+      border-color: white;
+    }
+
+    &:has([type="color"]) {
+      border-color: var(--selected-fill-color);
+    }
+
+    @media (hover: hover) {
+      &:hover {
+        background-color: black;
+      }
+    }
+
+    input {
+      appearance: none;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  label#toggle-collapse {
+    &:not(:has(:checked)) > span > span:last-of-type {
+      display: none;
+    }
+
+    &:has(:checked) > span > span:first-of-type {
+      display: none;
+    }
+  }
+
+  label:has(input[type="range"]) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  label:has(input:disabled) {
+    opacity: 0.5;
+  }
+
+  input:not([type="text"]) {
+    &:not(:disabled) {
+      cursor: pointer;
+    }
+  }
+
+  button {
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        background-color: black;
+      }
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+
+  button, label {
+    > span:first-child {
+      filter: drop-shadow(0 0 1px black);
+    }
+  }
+}
+
+main:has(#toggle-collapse input:checked) .collapsible {
+  display: none;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#portfolio-link {
+  position: absolute;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  background-color: rgb(0, 0, 0, 0.25);
+  padding: 6px;
+  border-radius: 99999px;
+  box-shadow: 0 0 4px 0 #f9b70f;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+
+  @media (hover: hover) {
+    &:hover {
+      background: black;
+    }
+  }
+
+  > img {
+    height: 4rem;
+    border-radius: 99999px;
+    pointer-events: none;
+  }
+}
+
+dialog#toolbar-option-info-dialog {
+  margin: auto;
+  padding: 20px;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border: none;
+  background: transparent;
+  width: auto;
+  max-width: min(100%, 500px);
+  height: 100%;
+  max-height: max-content;
+
+  &::backdrop {
+    background: transparent;
+    backdrop-filter: blur(1px);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-foreground {
+    position: relative;
+    box-shadow: 0 2px 10px 0 rgba(0, 0, 0, 0.5);
+    background: #eee url('./images/white-waves.webp');
+    border-radius: 8px;
+    width: 100%;
+    height: 100%;
+    max-height: max-content;
+
+    .modal-content {
+      width: 100%;
+      height: 100%;
+      max-height: max-content;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding: 1rem;
+      line-height: 1.5;
+
+      p {
+        font-weight: bold;
+        font-size: 1.5rem;
+        padding-right: 3rem;
+
+        > span {
+          filter: drop-shadow(0 0 1px black);
+        }
+      }
+
+      ul {
+        padding-inline-start: 1.5rem;
+
+        li {
+          padding-top: 0.75rem;
+        }
+      }
+    }
+  }
+
+  .close-button {
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    line-height: 1;
+    font-size: 14px;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+    width: 32px;
+    height: 32px;
+    padding: 1px 0 0 1px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    padding: 0;
+    font-family: sans-serif;
+
+    @media (hover: hover) {
+      &:hover {
+        background: #ddd;
+      }
+    }
+
+    > span {
+      /* Make the emoji always appear black */
+      filter: brightness(0);
+    }
+  }
+}

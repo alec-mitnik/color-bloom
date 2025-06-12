@@ -1,19 +1,28 @@
 <!DOCTYPE html>
-<html lang="en" onmousemove="onCanvasMouseMove(event)">
+<html lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
-<title>Color Bloom</title>
+<meta name="description" content="Make images/wallpapers with this unique web app that utilizes special color bloom effects." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Port+Lligat+Sans&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" type="text/css" href="./styles.css">
+
+<title>Color Bloom Art Maker</title>
 
 <script>
 "use strict"
 
 /* TODO:
- * - Add instructions/tutorial
+ * - Improve speed of simultaneous blooms
  * - Add color selection for brush?
- * - Support custom canvas sizes
+ * - Support stored fill presets?
+ * - Support custom canvas sizes?
  * - Support uploading own images as templates?
- * - Support width varying by speed of strokes or pressure of touch/stylus
+ * - Support width varying by speed of strokes or pressure of touch/stylus?
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
  */
 
@@ -665,7 +674,7 @@ async function share() {
 
   const shareData = {
     title: 'Color Bloom',
-    text: 'I got inspired and made some art!',
+    text: 'I made some special art!',
     files: [file],
     url: '/art.html',
   };
@@ -1097,8 +1106,13 @@ function handleClick(clickX, clickY, fromMove = false) {
 // let fillBrushCounter = FILL_BRUSH_THROTTLE - 1;
 
 function onCanvasMouseMove(event) {
-  const draggingCanvas = event.buttons !== 1
-      && document.getElementById("contentWrapper").classList.contains("positioning");
+  const contentWrapper = document.getElementById("contentWrapper");
+
+  if (!contentWrapper) {
+    return;
+  }
+
+  const draggingCanvas = event.buttons !== 1 && contentWrapper.classList.contains("positioning");
   const shouldDrag = draggingCanvas && interactive;
 
   if (shouldDrag) {
@@ -1971,13 +1985,30 @@ function drawImageData(data, ensureOutline = false) {
 }
 
 // eslint-disable-next-line no-unused-vars
-function resetSizeAndPosition() {
+function resetScaleAndPosition() {
   const scaleInput = document.getElementById('canvasScale');
   scaleInput.value = 50;
   onCanvasScaleValueChange(scaleInput.value, 'canvasScaleValue');
 
   setCssVar('--canvas-offset-x', '0px');
   setCssVar('--canvas-offset-y', '50px');
+}
+
+function openOptionInfoDialog(emojiIcon, label, description) {
+  const optionInfoDialog = document.getElementById('toolbar-option-info-dialog');
+  const modalContent = optionInfoDialog.querySelector('.modal-content');
+  modalContent.innerHTML = `
+    <p><span aria-hidden="true">${emojiIcon} </span>${label}</p>
+    <ul>${description.split('  ').map(line => `<li>${line}</li>`).join('')}</ul>
+  `;
+
+  optionInfoDialog.showModal();
+}
+
+// eslint-disable-next-line no-unused-vars
+function closeOptionInfoDialog() {
+  const optionInfoDialog = document.getElementById('toolbar-option-info-dialog');
+  optionInfoDialog.close();
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -2027,354 +2058,78 @@ function init() {
   // });
 
   document.getElementById('shareButton').style.display = navigator.share ? null : 'none';
+
+  const toolTipElements = [...document.querySelectorAll('#toolbar button'),
+      ...document.querySelectorAll('#toolbar label:has(input:not([type=range]))')];
+
+  for (const toolTipElement of toolTipElements) {
+    toolTipElement.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+
+      const element = event.currentTarget;
+      const iconWrapper = element.querySelector('& > span');
+
+      openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
+    });
+  }
 }
 </script>
-
-<style>
-*, *::before, *::after {
-  box-sizing: border-box;
-  flex: 0 0 auto;
-  min-width: 0;
-  min-height: 0;
-}
-
-:root {
-  --toolbar-pointer-events: all;
-  --selected-fill-color: black;
-  --canvas-width: 1920px;
-  --canvas-height: 1200px;
-  --canvas-scale: 0.5;
-  --canvas-offset-x: 0px;
-  --canvas-offset-y: 50px;
-  --mouse-x: -1000px;
-  --mouse-y: -1000px;
-  accent-color: var(--selected-fill-color);
-  font-size: 100%;
-
-  @media (width < 500px) {
-    font-size: 75%;
-  }
-}
-
-html, body, main {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-body, main, #contentWrapper {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #313437 url('./images/dark_wood.png');
-}
-
-#contentWrapper {
-  position: relative;
-  touch-action: none;
-  min-width: 100%;
-  min-height: 100%;
-
-  &.positioning {
-    cursor: grabbing;
-  }
-
-  .guide {
-    position: absolute;
-    background: #ddd;
-    opacity: 0.3;
-
-    &.vertical {
-      transform: translateX(var(--canvas-offset-x));
-      top: 0;
-      bottom: 0;
-      width: 2px;
-    }
-
-    &.horizontal {
-      transform: translateY(var(--canvas-offset-y));
-      left: 0;
-      right: 0;
-      height: 2px;
-    }
-
-    &.cursor {
-      @media (hover: none) {
-        display: none;
-      }
-
-      background-color: #9999ff;
-      opacity: 0.3;
-      top: -1px;
-      left: -1px;
-
-      &.vertical {
-        transform: translateX(var(--mouse-x));
-      }
-
-      &.horizontal {
-        transform: translateY(var(--mouse-y));
-      }
-    }
-  }
-}
-
-#canvasWrapper {
-  position: relative;
-  width: calc(var(--canvas-width) * var(--canvas-scale));
-  height: calc(var(--canvas-height) * var(--canvas-scale));
-  transform: translate(var(--canvas-offset-x), var(--canvas-offset-y));
-}
-
-canvas {
-  position: absolute;
-  touch-action: none;
-  background: transparent;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-
-  &#background-canvas {
-    border: 1px solid rgba(0, 0, 0, 0.3);
-    background: #e0e0e3 url('images/45degree_fabric.webp');
-    background-clip: content-box;
-    box-shadow: 0 5px 20px 10px rgba(0, 0, 0, 0.2);
-  }
-
-  &.brush-canvas {
-    z-index: 1;
-  }
-}
-
-#contentWrapper, canvas {
-  user-select: none;
-}
-
-#toolbar {
-  font-family: sans-serif;
-  pointer-events: var(--toolbar-pointer-events);
-  position: fixed;
-  top: 10px;
-  z-index: 10;
-  padding: 15px;
-  border-radius: 10px;
-  box-shadow: 0 5px 10px 2px rgba(0, 0, 0, 0.5);
-  max-width: calc(100% - 20px);
-  background: rgba(184, 209, 235) url('./images/so-white.png');
-  color: black;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-
-  &[inert] {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  div {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    max-width: 100%;
-  }
-
-  .outer-menu {
-    align-items: flex-start;
-    flex-wrap: nowrap;
-
-    &:not(:has(input[value=brush]:checked)) ~ .brush-menu,
-    &:not(:has(input[value=fill]:checked)) ~ .fill-menu,
-    &:not(:has(input[value=erase]:checked)) ~ .erase-menu {
-      display: none;
-    }
-  }
-
-  &:has(#show-guidelines>input:not(:checked)) ~ #contentWrapper .guide {
-    display: none;
-  }
-
-  .menu {
-    flex-wrap: wrap-reverse;
-    flex: 1;
-  }
-
-  label:not(:has(input[type="range"])), button {
-    border: 4px solid transparent;
-    background-color: rgb(0, 0, 0, 0.25);
-    background-clip: padding-box;
-    padding: 2px;
-    font-size: 2rem;
-    position: relative;
-    border-radius: 8px;
-  }
-
-  :has(#toggle-collapse :checked) label:has([value="fill"]:checked) {
-    border-color: var(--selected-fill-color) !important;
-  }
-
-  label:not(:has(input[type="range"])) {
-    cursor: pointer;
-
-    &:not(#toggle-collapse):has(:checked) {
-      background-color: black;
-      border-color: white;
-    }
-
-    &:has([type="color"]) {
-      border-color: var(--selected-fill-color);
-    }
-
-    @media (hover: hover) {
-      &:hover {
-        background-color: black;
-      }
-    }
-
-    input {
-      appearance: none;
-      background: transparent;
-      margin: 0;
-      padding: 0;
-      border: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-    }
-  }
-
-  label#toggle-collapse {
-    > span::before {
-      content: '➖';
-    }
-
-    &:has(:checked) > span::before {
-      content: '➕';
-    }
-  }
-
-  label:has(input[type="range"]) {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  label:has(input:disabled) {
-    opacity: 0.5;
-  }
-
-  input:not([type="text"]) {
-    &:not(:disabled) {
-      cursor: pointer;
-    }
-  }
-
-  button {
-    appearance: none;
-    cursor: pointer;
-    color: inherit;
-    font-family: inherit;
-
-    @media (hover: hover) {
-      &:hover:not(:disabled) {
-        background-color: black;
-      }
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-  }
-
-  button, input {
-    /* Prevent double-tap from zooming in on mobile */
-    touch-action: manipulation;
-  }
-
-  button, label {
-    > span:first-child {
-      filter: drop-shadow(0 0 1px black);
-    }
-  }
-}
-
-main:has(#toggle-collapse input:checked) .collapsible {
-  display: none;
-}
-
-.hidden {
-  display: none !important;
-}
-
-#portfolio-link {
-  position: absolute;
-  bottom: 1.25rem;
-  right: 1.25rem;
-  background-color: rgb(0, 0, 0, 0.25);
-  padding: 6px;
-  border-radius: 99999px;
-  box-shadow: 0 0 4px 0 #f9b70f;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-
-  @media (hover: hover) {
-    &:hover {
-      background: black;
-    }
-  }
-
-  > img {
-    height: 4rem;
-    border-radius: 99999px;
-    pointer-events: none;
-  }
-}
-</style>
 </head>
 
-<body onload="init()">
+<body onload="init()" onmousemove="onCanvasMouseMove(event)">
+  <!-- Toolbar Info Dialog -->
+  <dialog id="toolbar-option-info-dialog" aria-label="Option Info">
+    <div class="modal-backdrop" onclick="closeOptionInfoDialog()"></div>
+
+    <div class="modal-foreground">
+      <button autofocus class="close-button" aria-label="Close dialog" onclick="closeOptionInfoDialog()">
+        <span aria-hidden="true">❌&#65038;</span>
+      </button>
+
+      <div class="modal-content"></div>
+    </div>
+  </dialog>
+
   <main>
     <form id="toolbar" aria-label="Toolbar">
+      <p id="toolbar-info" class="collapsible">Right-click or long-press an option for info</p>
+
       <div class="outer-menu">
-        <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()">
+        <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()"
+            data-description="Hides everything but the canvas until the next interaction.">
           <span aria-hidden="true">👁️</span>
         </button>
 
         <div class="menu">
           <div role="radiogroup" aria-label="Tools">
-            <label aria-label="Brush" title="Brush">
+            <label aria-label="Brush" title="Brush"
+                data-description="Select this tool to draw black outlines.  Fill and erasure blooms stop at outlines.  Erasing outlines themselves leaves the corresponding fill area blank but leaves the surrounding area untouched.  You can then fill the erased outline area as a way to effectively get colored outlines.">
               <span aria-hidden="true">🖌️</span>
               <input type="radio" name="tool" value="brush" aria-label="Brush" checked />
             </label>
 
-            <label aria-label="Fill" title="Fill">
+            <label aria-label="Fill" title="Fill"
+                data-description="Select this tool to slowly fill a blank area with a configurable bloom of color, stopping at outlines.  Works with a single click/tap or by dragging.  Set all variances to 0 for a traditional solid fill.  Click/tap a filled area or the background outside the canvas to stop any fill blooms prematurely.">
               <span aria-hidden="true">🎆</span>
               <input type="radio" name="tool" value="fill" aria-label="Fill" />
             </label>
 
-            <label aria-label="Erase" title="Erase">
+            <label aria-label="Erase" title="Erase"
+                data-description="Select this tool to slowly erase filled areas or outlines, whichever is targeted first.  Works with a single click/tap or by dragging.  Click/tap a blank area or the background outside the canvas to stop any erasure blooms prematurely.">
               <span aria-hidden="true">🧼</span>
               <input type="radio" name="tool" value="erase" aria-label="Erase" />
             </label>
           </div>
 
           <div class="collapsible">
-            <label id="show-guidelines" aria-label="Show Guidelines" title="Show Guidelines">
+            <label id="show-guidelines" aria-label="Show Guidelines" title="Show Guidelines"
+                data-description="When toggled on, shows lines to help target the canvas center.">
               <span aria-hidden="true">📏</span>
               <input type="checkbox" name="show-guidelines" aria-label="Show Guidelines" />
             </label>
 
-            <button type="button" aria-label="Reset Size and Position" title="Reset Size and Position" onclick="resetSizeAndPosition()">
+            <button type="button" aria-label="Reset Scale and Position" title="Reset Scale and Position" onclick="resetScaleAndPosition()"
+                data-description="Resets the canvas scale and position to their starting values.  In addition to the slider, canvas scale can be adjusted by pinching/spreading on a touchscreen or with the mouse wheel.  Canvas position can be adjusted by dragging with multiple fingers on a touchscreen or while holding the right or middle mouse button.">
               <span aria-hidden="true">🎯</span>
             </button>
 
@@ -2385,32 +2140,41 @@ main:has(#toggle-collapse input:checked) .collapsible {
               <span id="canvasScaleValue">50%</span>
             </label>
 
-            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()">
+            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()"
+                data-description="Allows you to share your canvas image with others.">
               <span aria-hidden="true">💬</span>
             </button>
 
-            <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()">
+            <button id="downloadButton" type="button" aria-label="Download Canvas Image" title="Download Canvas Image" onclick="download()"
+                data-description="Downloads your canvas image.  It's sized to your device's screen, so it can be used as a wallpaper.">
               <span aria-hidden="true">📥</span>
             </button>
           </div>
 
           <div>
-            <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()">
+            <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()"
+                data-description="Instantly erases all filled areas and outlines.  Can be undone the same as other actions.">
               <span aria-hidden="true">⬜</span>
             </button>
 
-            <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled>
+            <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled
+                data-description="Undoes the previous fill or outline change.  Only the last 10 changes are tracked.">
               <span aria-hidden="true">↩️</span>
             </button>
 
-            <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled>
+            <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled
+                data-description="Redoes the most recently undone fill or outline change.">
               <span aria-hidden="true">↪️</span>
             </button>
           </div>
         </div>
 
-        <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse">
-          <span aria-hidden="true"></span>
+        <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse"
+            data-description="Toggles between a collapsed, minimalist toolbar and the full toolbar.">
+          <span aria-hidden="true">
+            <span>➖</span>
+            <span>➕</span>
+          </span>
           <input type="checkbox" name="toggle-collapse" />
         </label>
       </div>
@@ -2433,33 +2197,30 @@ main:has(#toggle-collapse input:checked) .collapsible {
         </div>
 
         <div>
-          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()">
+          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()"
+              data-description="Generates a random smattering of ellipses outlines.  Can be stacked or undone/reattempted as desired.">
             <span aria-hidden="true">⚫</span>
           </button>
 
-          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()">
+          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()"
+              data-description="Generates a random smattering of orthogonal outlines.  Can be stacked or undone/reattempted as desired.">
             <span aria-hidden="true">⬛</span>
           </button>
 
-          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()">
+          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()"
+              data-description="Generates a random smattering of diagonal outlines.  Can be stacked or undone/reattempted as desired.">
             <span aria-hidden="true">🔷</span>
           </button>
         </div>
 
         <div>
-          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')">
+          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')"
+              data-description="Adds a heart rose template outline, centered on the canvas.">
             <span aria-hidden="true">🌹</span>
           </button>
 
-          <!-- <button type="button" aria-label="Add Christmas Tree Template" title="Add Christmas Tree Template" onclick="loadTemplate('christmas-tree.png')">
-            <span aria-hidden="true">🎄</span>
-          </button>
-
-          <button type="button" aria-label="Add Gears Template" title="Add Gears Template" onclick="loadTemplate('gears.jpg')">
-            <span aria-hidden="true">⚙️</span>
-          </button> -->
-
-          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')">
+          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')"
+              data-description="Adds a palm tree template outline, centered on the canvas.">
             <span aria-hidden="true">🌴</span>
           </button>
         </div>
@@ -2467,7 +2228,8 @@ main:has(#toggle-collapse input:checked) .collapsible {
 
       <div class="fill-menu submenu collapsible" role="group" aria-label="Fill Submenu">
         <div>
-          <label id="limitless-fill" aria-label="Limitless Fill" title="Limitless Fill">
+          <label id="limitless-fill" aria-label="Limitless Fill" title="Limitless Fill"
+              data-description="Toggle this off to restrict each fill bloom to a configured size and also allow for some targeting leeway to easily fill in stray blank spots.">
             <span aria-hidden="true">♾️</span>
             <input type="checkbox" name="limitless-fill" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
           </label>
@@ -2480,8 +2242,9 @@ main:has(#toggle-collapse input:checked) .collapsible {
           </label>
         </div>
 
-        <label aria-label="Color for Fill" title="Color for Fill">
-          <span style="visibility: hidden";>🎨</span>
+        <label aria-label="Color for Fill" title="Color for Fill"
+            data-description="Selects the starting color for fill blooms.">
+          <span style="visibility: hidden;">🎨</span>
           <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
         </label>
 
@@ -2511,7 +2274,8 @@ main:has(#toggle-collapse input:checked) .collapsible {
 
       <div class="erase-menu submenu collapsible" role="group" aria-label="Erase Submenu">
         <div>
-          <label id="limitless-erase" aria-label="Limitless Erase" title="Limitless Erase">
+          <label id="limitless-erase" aria-label="Limitless Erase" title="Limitless Erase"
+              data-description="Toggle this off to restrict each erasure bloom to a configured size and also allow for some targeting leeway to easily erase stray filled spots.">
             <span aria-hidden="true">♾️</span>
             <input type="checkbox" name="limitless-erase" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
           </label>
@@ -2548,7 +2312,8 @@ main:has(#toggle-collapse input:checked) .collapsible {
     </div>
 
     <!-- Portfolio Link -->
-    <a id="portfolio-link" class="collapsible" href="https://alec-mitnik.github.io/" target="_blank" rel="author" aria-label="Check out my other projects">
+    <a id="portfolio-link" class="collapsible" href="https://alec-mitnik.github.io/" target="_blank" rel="author"
+        aria-label="Check out my other projects">
       <img src="./images/PXL_Avatar_1B.jpg" alt="">
     </a>
   </main>
