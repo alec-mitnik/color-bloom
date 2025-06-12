@@ -48,7 +48,8 @@ button:not(:disabled), a {
 
 button, input {
   /* Prevent double-tap from zooming in on mobile */
-  /* touch-action: manipulation; */
+  touch-action: manipulation;
+  -webkit-touch-callout: default;
 }
 
 body, main, #contentWrapper {
