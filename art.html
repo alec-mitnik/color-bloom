@@ -2012,6 +2012,16 @@ function closeOptionInfoDialog() {
   optionInfoDialog.close();
 }
 
+function setUserSelect(enabled) {
+  const value = enabled ? null : 'none';
+  document.body.style.userSelect = value;
+  document.body.style.webkitUserSelect = value;
+
+  const dialog = document.getElementById('toolbar-option-info-dialog');
+  dialog.style.userSelect = value;
+  dialog.style.webkitUserSelect = value;
+}
+
 // eslint-disable-next-line no-unused-vars
 function init() {
   CANVAS_WIDTH = window.screen.width;
@@ -2076,8 +2086,19 @@ function init() {
     // iOS Safari doesn't support contextmenu events, so need to implement long-press manually
     let longPressTimeoutId;
     let longPressTouchId;
+    const globalTouches = new Map();
+
+    document.addEventListener('touchmove', (event) => {
+      for (const touch of event.changedTouches) {
+        globalTouches.set(touch.identifier, touch);
+      }
+    });
 
     toolTipElement.addEventListener('touchstart', (event) => {
+      for (const touch of event.changedTouches) {
+        globalTouches.set(touch.identifier, touch);
+      }
+
       const element = event.currentTarget;
       longPressTouchId = event.changedTouches[0].identifier;
 
@@ -2085,24 +2106,35 @@ function init() {
       longPressTimeoutId = setTimeout(() => {
         clearTimeout(longPressTimeoutId);
         longPressTimeoutId = null;
+        const touch = globalTouches.get(longPressTouchId);
+
+        if (!document.elementsFromPoint(touch.clientX, touch.clientY).includes(element)) {
+          return;
+        }
 
         // Clear any text selection that might have been triggered
         window.getSelection().removeAllRanges();
 
         // Temporarily disable future text selection
-        document.querySelector('dialog#toolbar-option-info-dialog').style.userSelect = 'none';
-        document.body.style.userSelect = 'none';
+        setUserSelect(false);
 
         const iconWrapper = element.querySelector('& > span');
         openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
-      }, 750);
+      }, 600);
     });
 
     toolTipElement.addEventListener('touchend', (event) => {
+      for (const touch of event.changedTouches) {
+        globalTouches.delete(touch.identifier);
+      }
+
       // If the popup was opened by a long-press, prevent the context menu from triggering
       if (longPressTimeoutId == null && longPressTouchId != null) {
         for (const touch of event.changedTouches) {
           if (touch.identifier === longPressTouchId) {
+            // Clear any text selection that might have been triggered
+            window.getSelection().removeAllRanges();
+
             event.preventDefault();
             break;
           }
@@ -2110,8 +2142,7 @@ function init() {
       }
 
       // Re-enable text selection
-      document.querySelector('dialog#toolbar-option-info-dialog').style.userSelect = null;
-      document.body.style.userSelect = null;
+      setUserSelect(true);
 
       clearTimeout(longPressTimeoutId);
       longPressTimeoutId = null;
@@ -2119,9 +2150,12 @@ function init() {
     }, { passive: false });
 
     toolTipElement.addEventListener('touchcancel', () => {
+      for (const touch of event.changedTouches) {
+        globalTouches.delete(touch.identifier);
+      }
+
       // Re-enable text selection
-      document.querySelector('dialog#toolbar-option-info-dialog').style.userSelect = null;
-      document.body.style.userSelect = null;
+      setUserSelect(true);
 
       clearTimeout(longPressTimeoutId);
       longPressTimeoutId = null;
