@@ -17,8 +17,6 @@
 "use strict"
 
 /* TODO:
- * - Provide context menu trigger alternative for iOS Safari...
- * - Improve speed of simultaneous blooms
  * - Add color selection for brush?
  * - Support stored fill presets?
  * - Support custom canvas sizes?
@@ -289,12 +287,14 @@ function erasePixel(x, y, erasingOutline, startingPixel = undefined) {
   }
 
   if (erasingOutline || !countsAsOutlineAt(x, y)) {
+    const pixel = {x, y};
+
     if (blooms.has(startingPixel)) {
       const branches = blooms.get(startingPixel);
-      branches.splice(randIndex(branches, true), 0, {x, y});
+      branches.splice(randIndex(branches, true), 0, pixel);
       blooms.set(startingPixel, branches);
     } else {
-      blooms.set({x, y}, [{x, y}]);
+      blooms.set(pixel, [pixel]);
     }
   }
 }
