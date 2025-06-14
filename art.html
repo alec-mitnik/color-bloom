@@ -1915,13 +1915,12 @@ function imageTo2DArray(image) {
   brushPixelsChanged = false;
 
   // Try to ensure image doesn't come out pixelated on iOS
-  const devicePixelRatio = window.devicePixelRatio || 1;
+  const devicePixelRatio = 1; //window.devicePixelRatio || 1;
   const canvas = document.createElement('canvas');
   canvas.width = Math.floor(CANVAS_WIDTH * devicePixelRatio);
   canvas.height = Math.floor(CANVAS_HEIGHT * devicePixelRatio);
   const ctx = canvas.getContext('2d', {willReadFrequently: true});
   // ctx.scale(devicePixelRatio, devicePixelRatio);
-  ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
   // Calculate scaling and positioning
@@ -1945,23 +1944,23 @@ function imageTo2DArray(image) {
   ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
 
   // Create final canvas at CSS pixel dimensions
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = CANVAS_WIDTH;
-  finalCanvas.height = CANVAS_HEIGHT;
+  // const finalCanvas = document.createElement('canvas');
+  // finalCanvas.width = CANVAS_WIDTH;
+  // finalCanvas.height = CANVAS_HEIGHT;
 
-  const finalCtx = finalCanvas.getContext('2d');
-  finalCtx.imageSmoothingEnabled = true;
-  finalCtx.imageSmoothingQuality = 'high';
+  // const finalCtx = finalCanvas.getContext('2d');
+  // finalCtx.imageSmoothingEnabled = true;
+  // finalCtx.imageSmoothingQuality = 'high';
 
   // Downscale the high-res canvas to final dimensions
-  finalCtx.drawImage(canvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  // finalCtx.drawImage(canvas, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  const {data} = finalCtx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  const {data} = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   drawImageData(data, true);
 
   canvas.remove();
-  finalCanvas.remove();
+  // finalCanvas.remove();
 
   updateHistoryButtons();
 }
