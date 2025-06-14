@@ -609,6 +609,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
   canvas.width = widthOverride || loadedImage.width;
   canvas.height = heightOverride || loadedImage.height;
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
 
   ctx.drawImage(loadedImage, 0, 0, canvas.width, canvas.height);
   const {data} = ctx.getImageData(0, 0, canvas.width, canvas.height);
