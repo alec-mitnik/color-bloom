@@ -32,6 +32,10 @@ html, body, main {
   overflow: hidden;
 }
 
+body {
+  background: #313437 url('./images/dark_wood.png');
+}
+
 p, ul {
   margin: 0;
 }
@@ -55,7 +59,6 @@ body, main, #contentWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #313437 url('./images/dark_wood.png');
 }
 
 #contentWrapper {
@@ -152,10 +155,12 @@ canvas {
   color: black;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
   align-items: center;
   gap: 10px;
   text-align: center;
+  overflow: auto;
+  max-height: calc(100% - 20px);
 
   &[inert] {
     opacity: 0.5;
@@ -206,8 +211,12 @@ canvas {
     user-select: none;
   }
 
-  &:has(#toggle-collapse :checked) label:has([value="fill"]:checked) {
-    border-color: var(--selected-fill-color) !important;
+  &:has(#toggle-collapse :checked) {
+    max-height: 200px;
+
+    label:has([value="fill"]:checked) {
+      border-color: var(--selected-fill-color) !important;
+    }
   }
 
   label:not(:has(input[type="range"])) {
@@ -371,7 +380,7 @@ dialog#toolbar-option-info-dialog {
       p {
         font-weight: bold;
         font-size: 1.5rem;
-        padding-right: 3rem;
+        padding-right: 48px;
 
         > span {
           filter: drop-shadow(0 0 1px black);
