@@ -159,6 +159,7 @@ canvas {
   align-items: center;
   gap: 10px;
   text-align: center;
+  background-attachment: local;
   overflow: auto;
   max-height: calc(100% - 20px);
 
@@ -212,7 +213,7 @@ canvas {
   }
 
   &:has(#toggle-collapse :checked) {
-    max-height: 200px;
+    max-height: min(200px, 33vh);
 
     label:has([value="fill"]:checked) {
       border-color: var(--selected-fill-color) !important;
@@ -366,8 +367,9 @@ dialog#toolbar-option-info-dialog {
     width: auto;
     max-width: min(100%, 500px);
     max-height: 100%;
-    overflow: auto;
     /* max-height: max-content; - Doesn't work in Firefox */
+    overflow: auto;
+    background-attachment: local;
 
     .modal-content {
       width: 100%;
@@ -419,7 +421,7 @@ dialog#toolbar-option-info-dialog {
 
     @media (hover: hover) {
       &:hover {
-        background: #ddd;
+        background: #bbbbbb80;
       }
     }
 
