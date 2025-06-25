@@ -25,7 +25,6 @@
 
 /* TODO:
  * - Generate spiral pattern
- * - Movement controls are off while zoomed
  * - More template images
  * - Support uploading own images as templates, or maybe as translucent overlays to trace?
  * - Support color selection for brush?
@@ -81,6 +80,18 @@ let startingTouchDistance = NaN;
 let startingScaleValue = NaN;
 
 let HUE_MUTATION;
+
+window.addEventListener('DOMContentLoaded', () => {
+  init();
+});
+
+document.fonts.ready.then(() => {
+  document.querySelector('main').inert = false;
+});
+
+window.addEventListener('resize', () => {
+  setRelativeCanvasOffsetsWithLimits(0, 0);
+});
 
 function generateStartingHue() {
   return Math.random() * 360;
@@ -994,11 +1005,14 @@ function onRangeValueChange(event, spanId, displayAsPercent = true) {
 function onCanvasScaleValueChange(value, spanId) {
   document.getElementById(spanId).innerText = `${value}%`;
   setCssVar('--canvas-scale', value / 100);
+
+  // Update for new offset limits
+  setRelativeCanvasOffsetsWithLimits(0, 0);
 }
 
 function getCanvasCoordinates(mouseX, mouseY) {
   const canvas = getFillCanvas();
-  const scale = getCssVar('--canvas-scale');
+  const scale = parseFloat(getCssVar('--canvas-scale'));
 
   let {x, y} = canvas.getBoundingClientRect();
   x = Math.round((mouseX - x) / scale);
@@ -1009,7 +1023,7 @@ function getCanvasCoordinates(mouseX, mouseY) {
 
 function convertToMouseCoordinates(canvasX, canvasY) {
   const canvas = getFillCanvas();
-  const scale = getCssVar('--canvas-scale');
+  const scale = parseFloat(getCssVar('--canvas-scale'));
 
   const {x, y} = canvas.getBoundingClientRect();
   return {x: x + canvasX * scale, y: y + canvasY * scale};
@@ -1114,10 +1128,39 @@ function handleClick(clickX, clickY, fromMove = false) {
   }
 }
 
+function setRelativeCanvasOffsetsWithLimits(x, y) {
+  const canvasScale = parseFloat(getCssVar('--canvas-scale'));
+  const scaledWidth = CANVAS_WIDTH * canvasScale;
+  const scaledHeight = CANVAS_HEIGHT * canvasScale;
+
+  const viewportRequirementX = window.innerWidth * 0.2;
+  const viewportRequirementY = window.innerHeight * 0.2;
+
+  const maxOffscreenX = scaledWidth * 0.5 - viewportRequirementX;
+  const maxOffscreenY = scaledHeight * 0.5 - viewportRequirementY;
+
+  const offsetLimitX = (window.innerWidth * 0.5 + maxOffscreenX) / canvasScale;
+  const offsetLimitY = (window.innerHeight * 0.5 + maxOffscreenY) / canvasScale;
+
+  setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + x,
+      -offsetLimitX), offsetLimitX)}px`);
+  setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + y,
+      -offsetLimitY), offsetLimitY)}px`);
+}
+
 // const FILL_BRUSH_THROTTLE = 5;
 // let fillBrushCounter = FILL_BRUSH_THROTTLE - 1;
 
+let mouseX = NaN;
+let mouseY = NaN;
+
 function onCanvasMouseMove(event) {
+  const prevMouseX = mouseX;
+  const prevMouseY = mouseY;
+
+  mouseX = event.clientX;
+  mouseY = event.clientY;
+
   const contentWrapper = document.getElementById("contentWrapper");
 
   if (!contentWrapper) {
@@ -1128,28 +1171,24 @@ function onCanvasMouseMove(event) {
   const shouldDrag = draggingCanvas && interactive;
 
   if (shouldDrag) {
-    storedMovementX += event.movementX;
-    storedMovementY += event.movementY;
+    const canvasScale = parseFloat(getCssVar('--canvas-scale'));
+    const deltaX = mouseX - prevMouseX;
+    const deltaY = mouseY - prevMouseY;
+
+    storedMovementX += (isNaN(deltaX) ? 0 : deltaX) / canvasScale;
+    storedMovementY += (isNaN(deltaY) ? 0 : deltaY) / canvasScale;
   }
 
   if (!canvasMoveScheduled) {
     canvasMoveScheduled = true;
-    const clientX = event.clientX;
-    const clientY = event.clientY;
 
     requestAnimationFrame(() => {
       canvasMoveScheduled = false;
-      setCssVar('--mouse-x', `${clientX}px`);
-      setCssVar('--mouse-y', `${clientY}px`);
+      setCssVar('--mouse-x', `${mouseX}px`);
+      setCssVar('--mouse-y', `${mouseY}px`);
 
       if (shouldDrag) {
-        const offsetLimitX = window.innerWidth * 0.6;
-        const offsetLimitY = window.innerHeight * 0.6;
-        setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + storedMovementX,
-            -offsetLimitX), offsetLimitX)}px`);
-        setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + storedMovementY,
-            -offsetLimitY), offsetLimitY)}px`);
-
+        setRelativeCanvasOffsetsWithLimits(storedMovementX, storedMovementY);
         storedMovementX = 0;
         storedMovementY = 0;
       }
@@ -1245,13 +1284,7 @@ function onCanvasTouchMove(event) {
         canvasMoveScheduled = false;
 
         if (storedMovementX || storedMovementY) {
-          const offsetLimitX = window.innerWidth * 0.6;
-          const offsetLimitY = window.innerHeight * 0.6;
-          setCssVar('--canvas-offset-x', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-x')) + storedMovementX,
-              -offsetLimitX), offsetLimitX)}px`);
-          setCssVar('--canvas-offset-y', `${Math.min(Math.max(parseInt(getCssVar('--canvas-offset-y')) + storedMovementY,
-              -offsetLimitY), offsetLimitY)}px`);
-
+          setRelativeCanvasOffsetsWithLimits(storedMovementX, storedMovementY);
           storedMovementX = 0;
           storedMovementY = 0;
         }
@@ -2034,7 +2067,6 @@ function setUserSelect(enabled) {
   dialog.style.webkitUserSelect = value;
 }
 
-// eslint-disable-next-line no-unused-vars
 function init() {
   CANVAS_WIDTH = window.screen.width;
   CANVAS_HEIGHT = window.screen.height;
@@ -2178,7 +2210,7 @@ function init() {
 </script>
 </head>
 
-<body onload="init()" onmousemove="onCanvasMouseMove(event)">
+<body onmousemove="onCanvasMouseMove(event)">
   <!-- Toolbar Info Dialog -->
   <dialog id="toolbar-option-info-dialog" aria-label="Option Info">
     <div class="modal-backdrop" onclick="if (event.target === this) { closeOptionInfoDialog() }">
@@ -2192,7 +2224,7 @@ function init() {
     </div>
   </dialog>
 
-  <main>
+  <main inert>
     <form id="toolbar" aria-label="Toolbar">
       <p id="toolbar-info" class="collapsible">Right-click or long-press an option for info</p>
 

@@ -33,7 +33,10 @@ html, body, main {
 }
 
 body {
+  --base-dimension: 512px;
   background: #313437 url('./images/dark_wood.png');
+  background-size: calc(var(--base-dimension) * 2 * var(--canvas-scale)) auto;
+  background-position: center;
 }
 
 p, ul {
@@ -77,14 +80,14 @@ body, main, #contentWrapper {
     opacity: 0.3;
 
     &.vertical {
-      transform: translateX(var(--canvas-offset-x));
+      transform: translateX(calc(var(--canvas-offset-x) * var(--canvas-scale)));
       top: 0;
       bottom: 0;
       width: 2px;
     }
 
     &.horizontal {
-      transform: translateY(var(--canvas-offset-y));
+      transform: translateY(calc(var(--canvas-offset-y) * var(--canvas-scale)));
       left: 0;
       right: 0;
       height: 2px;
@@ -115,7 +118,7 @@ body, main, #contentWrapper {
   position: relative;
   width: calc(var(--canvas-width) * var(--canvas-scale));
   height: calc(var(--canvas-height) * var(--canvas-scale));
-  transform: translate(var(--canvas-offset-x), var(--canvas-offset-y));
+  transform: translate(calc(var(--canvas-offset-x) * var(--canvas-scale)), calc(var(--canvas-offset-y) * var(--canvas-scale)));
 }
 
 canvas {
@@ -127,9 +130,12 @@ canvas {
   z-index: 0;
 
   &#background-canvas {
-    border: 1px solid rgba(0, 0, 0, 0.3);
+    --base-dimension: 315px;
     background: #e0e0e3 url('images/45degree_fabric.webp');
+    /* Set min to avoid moire effect  */
+    background-size: calc(var(--base-dimension) * 2 * max(0.3, var(--canvas-scale))) auto;
     background-clip: content-box;
+    border: 1px solid rgba(0, 0, 0, 0.3);
     box-shadow: 0 5px 20px 10px rgba(0, 0, 0, 0.2);
   }
 
@@ -299,8 +305,17 @@ canvas {
   }
 }
 
-main:has(#toggle-collapse input:checked) .collapsible {
-  display: none;
+main {
+  transition: opacity 0.5s;
+
+  &[inert] {
+    opacity: 0;
+    transition: none;
+  }
+
+  &:has(#toggle-collapse input:checked) .collapsible {
+    display: none;
+  }
 }
 
 .hidden {
