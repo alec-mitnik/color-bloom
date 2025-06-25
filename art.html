@@ -1232,7 +1232,7 @@ function onCanvasTouchMove(event) {
   // eventTouches.push(newTouch);
 
   const draggingCanvas = eventTouches.length > 1
-      && document.getElementById("contentWrapper").classList.contains("positioning")
+      && document.getElementById("contentWrapper").classList.contains("positioning"); // Comment out for testing
   const shouldDrag = draggingCanvas; // && interactive;
 
   let netMovementX = 0, netMovementY = 0, totalDistance = 0, pairCount = 0;
@@ -1241,8 +1241,10 @@ function onCanvasTouchMove(event) {
     const oldTouch = touches.get(touch.identifier);
 
     if (oldTouch) {
-      netMovementX += touch.clientX - oldTouch.clientX;
-      netMovementY += touch.clientY - oldTouch.clientY;
+      const canvasScale = parseFloat(getCssVar('--canvas-scale'));
+
+      netMovementX += (touch.clientX - oldTouch.clientX) / canvasScale;
+      netMovementY += (touch.clientY - oldTouch.clientY) / canvasScale;
 
       if (shouldDrag) {
         for (const otherTouch of eventTouches) {
