@@ -1002,12 +1002,42 @@ function onRangeValueChange(event, spanId, displayAsPercent = true) {
       `${Math.floor(event.currentTarget.value * 100 / event.currentTarget.max)}%` : event.currentTarget.value;
 }
 
+let smoothScaleAnimationId = null;
+
+function smoothScale(targetScale) {
+  function scaleStep() {
+    cancelAnimationFrame(smoothScaleAnimationId);
+    const canvasScale = parseFloat(getCssVar('--canvas-scale'));
+    console.log("step", canvasScale, targetScale);
+
+    if (Math.abs(canvasScale - targetScale) < 0.005) {
+      setCssVar('--canvas-scale', targetScale);
+
+      // Update for new offset limits
+      setRelativeCanvasOffsetsWithLimits(0, 0);
+      smoothScaleAnimationId = null;
+      return;
+    }
+
+    const delta = (targetScale - canvasScale) * 0.25;
+    const sign = Math.sign(delta);
+    const absDelta = Math.abs(delta);
+
+    setCssVar('--canvas-scale', canvasScale + sign * Math.max(absDelta, 0.004));
+
+    // Update for new offset limits
+    setRelativeCanvasOffsetsWithLimits(0, 0);
+    smoothScaleAnimationId = requestAnimationFrame(scaleStep);
+  }
+
+  cancelAnimationFrame(smoothScaleAnimationId);
+  smoothScaleAnimationId = requestAnimationFrame(scaleStep);
+}
+
 function onCanvasScaleValueChange(value, spanId) {
   document.getElementById(spanId).innerText = `${value}%`;
-  setCssVar('--canvas-scale', value / 100);
 
-  // Update for new offset limits
-  setRelativeCanvasOffsetsWithLimits(0, 0);
+  smoothScale(value / 100);
 }
 
 function getCanvasCoordinates(mouseX, mouseY) {

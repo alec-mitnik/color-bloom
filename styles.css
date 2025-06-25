@@ -134,6 +134,8 @@ canvas {
     background: #e0e0e3 url('images/45degree_fabric.webp');
     /* Set min to avoid moire effect  */
     background-size: calc(var(--base-dimension) * 2 * max(0.3, var(--canvas-scale))) auto;
+    /* background-size: calc(var(--base-dimension) * 2 * var(--canvas-scale)) auto; */
+    background-position: center;
     background-clip: content-box;
     border: 1px solid rgba(0, 0, 0, 0.3);
     box-shadow: 0 5px 20px 10px rgba(0, 0, 0, 0.2);
