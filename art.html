@@ -24,7 +24,7 @@
 "use strict"
 
 /* TODO:
- * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer
+ * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer?
  * - Generate spiral pattern
  * - More template images
  * - Support uploading own images as templates, or maybe as translucent overlays to trace?
@@ -91,6 +91,10 @@ document.fonts.ready.then(() => {
 });
 
 window.addEventListener('resize', () => {
+  setRelativeCanvasOffsetsWithLimits(0, 0);
+});
+
+window.screen.orientation.addEventListener('change', () => {
   setRelativeCanvasOffsetsWithLimits(0, 0);
 });
 
@@ -2100,9 +2104,25 @@ function setUserSelect(enabled) {
   dialog.style.webkitUserSelect = value;
 }
 
+function calculateScreenDimensions() {
+  const orientation = window.screen.orientation;
+  const sideways = (360 + orientation.angle) % 180 === 90;
+
+  // Only Apple devices don't swap screen dimensions with orientation,
+  // but since browser height extends fully across the screen on mobile devices
+  // (even if split horizontally), we can detect when the device is sideways
+  // (therefore mobile) and when browser height matches the screen width instead
+  if (sideways && window.outerHeight === window.screen.width) {
+    return {screenWidth: window.screen.height, screenHeight: window.screen.width};
+  }
+
+  return {screenWidth: window.screen.width, screenHeight: window.screen.height};
+}
+
 function init() {
-  CANVAS_WIDTH = window.screen.width;
-  CANVAS_HEIGHT = window.screen.height;
+  const {screenWidth, screenHeight} = calculateScreenDimensions();
+  CANVAS_WIDTH = screenWidth;
+  CANVAS_HEIGHT = screenHeight;
 
   let canvasWrapper = document.getElementById("canvasWrapper");
 

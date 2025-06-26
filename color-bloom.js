@@ -412,6 +412,8 @@ export function removeCanvas(spawningElement = document.body) {
     }
 
     window.removeEventListener("resize", blooms.get(spawningElement).resizeListener);
+    screen.orientation.removeEventListener('change', blooms.get(spawningElement).resizeListener);
+
     blooms.delete(spawningElement);
   }
 }
@@ -645,6 +647,21 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
   return pixelGrid;
 }
 
+function calculateScreenDimensions() {
+  const orientation = window.screen.orientation;
+  const sideways = (360 + orientation.angle) % 180 === 90;
+
+  // Only Apple devices don't swap screen dimensions with orientation,
+  // but since browser height extends fully across the screen on mobile devices
+  // (even if split horizontally), we can detect when the device is sideways
+  // (therefore mobile) and when browser height matches the screen width instead
+  if (sideways && window.outerHeight === window.screen.width) {
+    return {screenWidth: window.screen.height, screenHeight: window.screen.width};
+  }
+
+  return {screenWidth: window.screen.width, screenHeight: window.screen.height};
+}
+
 /**
  * Generates a bloom effect to fill in an image on an HTML canvas
  * @param {Object} [options] - Config options for the bloom effect.
@@ -663,7 +680,7 @@ function imageTo2dArray(loadedImage, widthOverride, heightOverride, canvasWidth,
  * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
  * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
  * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already, and also retriggers when restored from cache (like when closing and reopening the iOS Safari app).
- * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
+ * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize or orientation change, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
  * @param {boolean} [options.confineToSpawningElement] - If true, the bloom canvas will be contained within the of the spawning element, and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
  */
 export async function bloomImage({
@@ -704,12 +721,14 @@ export async function bloomImage({
 
   if (!canvas) {
     canvas = document.createElement("canvas");
-    canvas.width = window.screen.width;
-    canvas.height = window.screen.height;
 
     if (confineToSpawningElement) {
       canvas.width = width;
       canvas.height = height;
+    } else {
+      const {screenWidth, screenHeight} = calculateScreenDimensions();
+      canvas.width = screenWidth;
+      canvas.height = screenHeight;
     }
 
     Object.assign(canvas, overridingCanvasAttributes);
@@ -768,13 +787,17 @@ export async function bloomImage({
     canvasWrapper.appendChild(canvas);
 
     blooms.get(spawningElement).resizeListener = debounce(() => {
-      let expectedWidth = window.screen.width;
-      let expectedHeight = window.screen.height;
+      let expectedWidth;
+      let expectedHeight;
 
       if (confineToSpawningElement) {
         const {width: newWidth, height: newHeight} = spawningElement.getBoundingClientRect();
         expectedWidth = newWidth;
         expectedHeight = newHeight;
+      } else {
+        const {screenWidth, screenHeight} = calculateScreenDimensions();
+        expectedWidth = screenWidth;
+        expectedHeight = screenHeight;
       }
 
       if (canvas.width === expectedWidth && canvas.height === expectedHeight) {
@@ -790,6 +813,7 @@ export async function bloomImage({
       }
     }, 50);
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
+    screen.orientation.addEventListener('change', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
       if (!blooms.get(spawningElement).pageshowListener) {
@@ -818,8 +842,14 @@ export async function bloomImage({
     }
   } else if (!canvas.width || !canvas.height) {
     // Fix iOS Safari restoration bug where canvas height becomes 0
-    canvas.width = confineToSpawningElement ? width : window.screen.width;
-    canvas.height = confineToSpawningElement ? height : window.screen.height;
+    if (confineToSpawningElement) {
+      canvas.width = width;
+      canvas.height = height;
+    } else {
+      const {screenWidth, screenHeight} = calculateScreenDimensions();
+      canvas.width = screenWidth;
+      canvas.height = screenHeight;
+    }
   }
 
   const spawningElementIsBody = spawningElement === document.body;
@@ -896,7 +926,7 @@ export async function bloomImage({
  * @param {number} [options.maxRadius] - If specified, stops the bloom once any part of it reaches the specified radius.
  * @param {number} [options.speed] - The speed of the bloom, as a value from 0 to 1.  Defaults to full speed.
  * @param {boolean} [options.triggerOnLoad] - If true, waits until the document loads, if it hasn't already, and also retriggers when restored from cache (like when closing and reopening the iOS Safari app).
- * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
+ * @param {boolean} [options.retriggerOnScreenSizeChange] - On window resize or orientation change, blooms are automatically cleared if the screen size or container size changes (thus invalidating the generated canvas size).  Set this to true to then retrigger the bloom in such instances.
  * @param {boolean} [options.confineToSpawningElement] - If true, the bloom canvas will be contained within the of the spawning element, and the bloom won't extend beyond its bounds.  Will automatically set the spawning element's position style to 'relative'.
  */
 export function bloomColor({
@@ -949,12 +979,14 @@ export function bloomColor({
 
   if (!canvas) {
     canvas = document.createElement("canvas");
-    canvas.width = window.screen.width;
-    canvas.height = window.screen.height;
 
     if (confineToSpawningElement) {
       canvas.width = width;
       canvas.height = height;
+    } else {
+      const {screenWidth, screenHeight} = calculateScreenDimensions();
+      canvas.width = screenWidth;
+      canvas.height = screenHeight;
     }
 
     Object.assign(canvas, overridingCanvasAttributes);
@@ -1013,13 +1045,17 @@ export function bloomColor({
     canvasWrapper.appendChild(canvas);
 
     blooms.get(spawningElement).resizeListener = debounce(() => {
-      let expectedWidth = window.screen.width;
-      let expectedHeight = window.screen.height;
+      let expectedWidth;
+      let expectedHeight;
 
       if (confineToSpawningElement) {
         const {width: newWidth, height: newHeight} = spawningElement.getBoundingClientRect();
         expectedWidth = newWidth;
         expectedHeight = newHeight;
+      } else {
+        const {screenWidth, screenHeight} = calculateScreenDimensions();
+        expectedWidth = screenWidth;
+        expectedHeight = screenHeight;
       }
 
       if (canvas.width === expectedWidth && canvas.height === expectedHeight) {
@@ -1035,6 +1071,7 @@ export function bloomColor({
       }
     }, 50);
     window.addEventListener('resize', blooms.get(spawningElement).resizeListener);
+    screen.orientation.addEventListener('change', blooms.get(spawningElement).resizeListener);
 
     if (triggerOnLoad) {
       if (!blooms.get(spawningElement).pageshowListener) {
@@ -1063,8 +1100,14 @@ export function bloomColor({
     }
   } else if (!canvas.width || !canvas.height) {
     // Fix iOS Safari restoration bug where canvas height becomes 0
-    canvas.width = confineToSpawningElement ? width : window.screen.width;
-    canvas.height = confineToSpawningElement ? height : window.screen.height;
+    if (confineToSpawningElement) {
+      canvas.width = width;
+      canvas.height = height;
+    } else {
+      const {screenWidth, screenHeight} = calculateScreenDimensions();
+      canvas.width = screenWidth;
+      canvas.height = screenHeight;
+    }
   }
 
   const spawningElementIsBody = spawningElement === document.body;
