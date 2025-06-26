@@ -541,12 +541,13 @@ export function bloomErase({
   const confineToSpawningElement = spawningElement.contains(canvas);
 
   const spawningElementIsBody = spawningElement === document.body;
+  const {screenWidth, screenHeight} = calculateScreenDimensions();
 
   if (isNaN(bloomX)) {
     if (confineToSpawningElement) {
       bloomX = width / 2;
     } else {
-      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+      bloomX = (screenWidth - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
           + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
@@ -555,7 +556,7 @@ export function bloomErase({
     if (confineToSpawningElement) {
       bloomY = height / 2;
     } else {
-      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+      bloomY = (screenHeight - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
           + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
@@ -853,12 +854,13 @@ export async function bloomImage({
   }
 
   const spawningElementIsBody = spawningElement === document.body;
+  const {screenWidth, screenHeight} = calculateScreenDimensions();
 
   if (isNaN(bloomX)) {
     if (confineToSpawningElement) {
       bloomX = width / 2;
     } else {
-      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+      bloomX = (screenWidth - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
           + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
@@ -867,7 +869,7 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       imageX = width / 2;
     } else {
-      imageX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+      imageX = (screenWidth - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
           + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
@@ -876,7 +878,7 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       bloomY = height / 2;
     } else {
-      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+      bloomY = (screenHeight - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
           + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
@@ -885,7 +887,7 @@ export async function bloomImage({
     if (confineToSpawningElement) {
       imageY = height / 2;
     } else {
-      imageY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+      imageY = (screenHeight - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
           + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
@@ -1111,12 +1113,13 @@ export function bloomColor({
   }
 
   const spawningElementIsBody = spawningElement === document.body;
+  const {screenWidth, screenHeight} = calculateScreenDimensions();
 
   if (isNaN(bloomX)) {
     if (confineToSpawningElement) {
       bloomX = width / 2;
     } else {
-      bloomX = (window.screen.width - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
+      bloomX = (screenWidth - window.innerWidth) / 2 + (spawningElementIsBody ? 0 : x)
           + (spawningElementIsBody ? window.innerWidth : width) / 2;
     }
   }
@@ -1125,7 +1128,7 @@ export function bloomColor({
     if (confineToSpawningElement) {
       bloomY = height / 2;
     } else {
-      bloomY = (window.screen.height - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
+      bloomY = (screenHeight - window.innerHeight) / 2 + (spawningElementIsBody ? 0 : y)
           + (spawningElementIsBody ? window.innerHeight : height) / 2;
     }
   }
