@@ -27,10 +27,12 @@
  * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer?
  * - Generate spiral pattern
  * - More template images
+ * - Reveal options more gradually?
+ * - Persist gallery of past images as base 64 encoded strings?
  * - Support uploading own images as templates, or maybe as translucent overlays to trace?
  * - Support color selection for brush?
  * - Support moving canvas contents around?
- * - Support stored fill presets?
+ * - Support stored fill settings history/presets?
  * - Support custom canvas sizes?
  * - Support width varying by speed of strokes or pressure of touch/stylus?
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
@@ -48,6 +50,7 @@ const MAX_LIGHTNESS = 0.6;
 
 let LIGHTNESS_MUTATION;
 let STARTING_LIGHTNESS;
+let HUE_MUTATION;
 
 const HISTORY_LIMIT = 1 + 10;
 const BRUSH_STROKE_REPEATS = 50;
@@ -80,11 +83,109 @@ const touches = new Map();
 let startingTouchDistance = NaN;
 let startingScaleValue = NaN;
 
-let HUE_MUTATION;
+const defaultShortcuts = {
+  view_canvas: {
+    displayName: 'View Canvas',
+    commands: [
+      {
+        key: 'v',
+      },
+    ],
+  },
+  brush: {
+    displayName: 'Select Brush',
+    commands: [
+      {
+        key: '1',
+      },
+    ],
+  },
+  fill: {
+    displayName: 'Select Fill',
+    commands: [
+      {
+        key: '2',
+      },
+    ],
+  },
+  erase: {
+    displayName: 'Select Erase',
+    commands: [
+      {
+        key: '3',
+      },
+    ],
+  },
+  fill_color: {
+    displayName: 'Select Color for Fill',
+    commands: [
+      {
+        key: 'c',
+      },
+    ],
+  },
+  show_guidelines: {
+    displayName: 'Toggle Guidelines',
+    commands: [
+      {
+        key: 'g',
+      },
+    ],
+  },
+  reset_scale: {
+    displayName: 'Reset Scale and Position',
+    commands: [
+      {
+        key: '0',
+        ctrl: true,
+      },
+    ],
+  },
+  reset_canvas: {
+    displayName: 'Reset Canvas',
+    commands: [
+      {
+        key: 'r',
+      },
+    ],
+  },
+  undo: {
+    displayName: 'Undo',
+    commands: [
+      {
+        key: 'z',
+        ctrl: true,
+      },
+    ],
+  },
+  redo: {
+    displayName: 'Redo',
+    commands: [
+      {
+        key: 'y',
+        ctrl: true,
+      },
+      {
+        key: 'z',
+        ctrl: true,
+        shift: true,
+      },
+    ],
+  },
+  toggle_toolbar_collapse: {
+    displayName: 'Toggle Toolbar Collapse',
+    commands: [
+      {
+        key: 't',
+      },
+    ],
+  },
+};
 
-window.addEventListener('DOMContentLoaded', () => {
-  init();
-});
+let shortcuts = structuredClone(defaultShortcuts);
+
+window.addEventListener('DOMContentLoaded', init);
+window.addEventListener('pageshow', loadShortcutsData);
 
 document.fonts.ready.then(() => {
   document.querySelector('main').inert = false;
@@ -96,6 +197,77 @@ window.addEventListener('resize', () => {
 
 window.screen.orientation.addEventListener('change', () => {
   setRelativeCanvasOffsetsWithLimits(0, 0);
+});
+
+window.addEventListener('keydown', (event) => {
+  if (document.querySelector('dialog[open]')) {
+    return;
+  }
+
+  if (document.getElementById('toolbar').classList.contains('hidden')) {
+    event.preventDefault();
+    event.stopPropagation();
+    stopViewingCanvas();
+    return;
+  }
+
+  for (const property in shortcuts) {
+    for (const shortcut of shortcuts[property].commands) {
+      if (event.key.toUpperCase() === shortcut.key.toUpperCase()
+          && event.ctrlKey === !!shortcut.ctrl
+          && event.shiftKey === !!shortcut.shift
+          && event.altKey === !!shortcut.alt
+          && event.metaKey === !!shortcut.meta) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        switch (property) {
+          case 'view_canvas':
+            viewCanvas();
+            break;
+          case 'brush':
+            document.querySelector('input[name=tool][value=brush]').checked = true;
+            break;
+          case 'fill':
+            document.querySelector('input[name=tool][value=fill]').checked = true;
+            break;
+          case 'erase':
+            document.querySelector('input[name=tool][value=erase]').checked = true;
+            break;
+          case 'fill_color':
+            document.querySelector('input[name=tool][value=fill]').checked = true;
+            setTimeout(() => document.querySelector('input[name=fillColor]').click());
+            break;
+          case 'show_guidelines': {
+            const guidelinesCheckbox = document.querySelector('input[name=show-guidelines]');
+            guidelinesCheckbox.checked = !guidelinesCheckbox.checked;
+            break;
+          }
+          case 'reset_scale':
+            resetScaleAndPosition();
+            break;
+          case 'reset_canvas':
+            resetCanvas();
+            break;
+          case 'undo':
+            undo();
+            break;
+          case 'redo':
+            redo();
+            break;
+          case 'toggle_toolbar_collapse': {
+            const toggleCollapseCheckbox = document.querySelector('input[name=toggle-collapse]');
+            toggleCollapseCheckbox.checked = !toggleCollapseCheckbox.checked;
+            break;
+          }
+          default:
+            // Do nothing
+
+          return;
+        }
+      }
+    }
+  }
 });
 
 function generateStartingHue() {
@@ -735,24 +907,25 @@ function download() {
   canvas.remove();
 }
 
-// eslint-disable-next-line no-unused-vars
 function undo() {
   if (!interactive) {
     return;
   }
 
-  const historyType = combinedHistory[combinedHistoryIndex]
+  if (combinedHistoryIndex < combinedHistory.length - 1) {
+    const historyType = combinedHistory[combinedHistoryIndex]
 
-  if (historyType === "fill" || historyType === "both") {
-    undoFill();
+    if (historyType === "fill" || historyType === "both") {
+      undoFill();
+    }
+
+    if (historyType === "brush" || historyType === "both") {
+      undoBrush();
+    }
+
+    combinedHistoryIndex++;
+    updateHistoryButtons();
   }
-
-  if (historyType === "brush" || historyType === "both") {
-    undoBrush();
-  }
-
-  combinedHistoryIndex++;
-  updateHistoryButtons();
 }
 
 function undoFill(allowRedo = true) {
@@ -806,7 +979,6 @@ function undoBrush(allowRedo = true) {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
 function redo() {
   if (!interactive) {
     return;
@@ -958,7 +1130,6 @@ async function syncPixelGridToBrushCanvas() {
   }));
 }
 
-// eslint-disable-next-line no-unused-vars
 function resetCanvas() {
   if (!interactive) {
     return;
@@ -1013,7 +1184,6 @@ function smoothScale(targetScale) {
   function scaleStep() {
     cancelAnimationFrame(smoothScaleAnimationId);
     const canvasScale = parseFloat(getCssVar('--canvas-scale'));
-    console.log("step", canvasScale, targetScale);
 
     if (Math.abs(canvasScale - targetScale) < 0.005) {
       setCssVar('--canvas-scale', targetScale);
@@ -1357,10 +1527,16 @@ function onCanvasTouchMove(event) {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
 function viewCanvas() {
   document.getElementById("toolbar").classList.add("hidden");
+  document.getElementById("settings-button").classList.add("hidden");
   document.getElementById("portfolio-link").classList.add("hidden");
+}
+
+function stopViewingCanvas() {
+  document.getElementById("toolbar").classList.remove("hidden");
+  document.getElementById("settings-button").classList.remove("hidden");
+  document.getElementById("portfolio-link").classList.remove("hidden");
 }
 
 function onCanvasMouseDown(event) {
@@ -1500,10 +1676,8 @@ function onCanvasMouseUp(event) {
   setCssVar('--toolbar-pointer-events', 'all');
   document.getElementById("contentWrapper").classList.remove("positioning");
 
-  const toolbar = document.getElementById("toolbar");
   setTimeout(() => {
-    toolbar.classList.remove("hidden");
-    document.getElementById("portfolio-link").classList.remove("hidden");
+    stopViewingCanvas();
   }, 50);
 
   // event.button is 0 for the primary button (left click)
@@ -1648,10 +1822,8 @@ function onCanvasTouchEnd(event) {
 
       setCssVar('--toolbar-pointer-events', 'all');
 
-      const toolbar = document.getElementById("toolbar");
       setTimeout(() => {
-        toolbar.classList.remove("hidden");
-        document.getElementById("portfolio-link").classList.remove("hidden");
+        stopViewingCanvas();
       }, 50);
 
       if (interactive && clickTimeoutId) {
@@ -2067,7 +2239,6 @@ function drawImageData(data, ensureOutline = false) {
   }
 }
 
-// eslint-disable-next-line no-unused-vars
 function resetScaleAndPosition() {
   const scaleInput = document.getElementById('canvasScale');
   scaleInput.value = 50;
@@ -2081,9 +2252,18 @@ function openOptionInfoDialog(emojiIcon, label, description) {
   const optionInfoDialog = document.getElementById('toolbar-option-info-dialog');
   const modalContent = optionInfoDialog.querySelector('.modal-content');
   modalContent.innerHTML = `
-    <p><span aria-hidden="true">${emojiIcon} </span>${label}</p>
+    <h1><span aria-hidden="true">${emojiIcon} </span>${label}</h1>
     <ul>${description.split('  ').map(line => `<li>${line}</li>`).join('')}</ul>
   `;
+
+  const shortcutCommands = shortcuts[label.toLowerCase()];
+
+  if (shortcutCommands?.length) {
+    modalContent.innerHTML += `
+      <h2>Keyboard Shortcut${shortcutCommands.length === 1 ? '' : 's'}</h2>
+      <ul>${shortcutCommands.map((shortcut, i) => `<li>${getShortcutString(shortcut, i + 1)}</li>`).join('')}</ul>
+    `;
+  }
 
   optionInfoDialog.showModal();
 }
@@ -2092,6 +2272,227 @@ function openOptionInfoDialog(emojiIcon, label, description) {
 function closeOptionInfoDialog() {
   const optionInfoDialog = document.getElementById('toolbar-option-info-dialog');
   optionInfoDialog.close();
+}
+
+function getShortcutString(shortcut, ordinal) {
+  // Meta is Windows or Command key
+  const {key, ctrl, alt, meta, shift} = shortcut;
+  const keysArray = [];
+
+  if (meta) {
+    keysArray.push('<kbd class="meta-key" title="Windows key or Command key"><span>Windows key or Command key</span></kbd>');
+  }
+
+  if (alt) {
+    keysArray.push('<kbd class="alt-key" title="Alt key or Option key"><span>Alt key or Option key</span></kbd>');
+  }
+
+  if (ctrl) {
+    keysArray.push('<kbd class="control-key" title="Control key"><span>Control key</span></kbd>');
+  }
+
+  if (shift) {
+    keysArray.push('<kbd class="shift-key" title="Shift key"><span>Shift key</span></kbd>');
+  }
+
+  let displayedKey = key;
+
+  if (key === 'Control' || key === 'Alt' || key === 'Meta' || key === 'Shift') {
+    displayedKey = '...';
+  }
+
+  if (key === ' ') {
+    console.log(event);
+    displayedKey = 'Spacebar';
+  }
+
+  keysArray.push(`<kbd>${displayedKey}</kbd>`);
+
+  return `<span class="sr-only">Shortcut number ${ordinal}: </span>${keysArray.join(' + ')}`;
+}
+
+function loadShortcutsData() {
+  try {
+    const loadedShortcutsData = localStorage.getItem("shortcuts");
+
+    if (loadedShortcutsData) {
+      const loadedShortcuts = JSON.parse(loadedShortcutsData);
+
+      for (const property in loadedShortcuts) {
+        if (shortcuts[property]) {
+          shortcuts[property].commands = loadedShortcuts[property].commands;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Unable to access local storage:", e);
+  }
+}
+
+function saveShortcutsData() {
+  try {
+    localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
+  } catch (e) {
+    console.warn(e);
+  }
+}
+
+function refreshShortcutsDisplay() {
+  const shortcutsTableBody = document.querySelector('#shortcuts-table tbody');
+  shortcutsTableBody.innerHTML = '';
+
+  for (const property in shortcuts) {
+    const shortcutsListId = `${property.replace('_', '-')}-shortcuts`;
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${shortcuts[property].displayName}</td>
+      <td colspan="2">
+        <div id="${shortcutsListId}" class="shortcuts"></div>
+        <button aria-label="Add shortcut for '${shortcuts[property].displayName}'" class="add-shortcut"
+            onclick="addShortcut(event, '${property}')"></button>
+      </td>
+    `;
+    shortcutsTableBody.appendChild(row);
+
+    const shortcutsList = document.getElementById(shortcutsListId);
+
+    let index = 0;
+    for (const shortcut of shortcuts[property].commands) {
+      const i = index;
+      const shortcutDisplay = document.createElement('div');
+      shortcutDisplay.innerHTML = `<p>${getShortcutString(shortcut, i + 1)}</p>`;
+      shortcutsList.appendChild(shortcutDisplay);
+
+      const clearButton = document.createElement('button');
+      clearButton.innerHTML = 'Clear';
+      clearButton.ariaLabel = `Clear shortcut number ${i + 1} for '${shortcuts[property].displayName}'`;
+      clearButton.addEventListener('click', () => {
+        shortcuts[property].commands.splice(i, 1);
+        saveShortcutsData();
+        refreshShortcutsDisplay();
+      });
+
+      shortcutDisplay.appendChild(clearButton);
+      index++;
+    }
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+function escapeDialog(event, closeFunction) {
+  if (event.key === 'Escape' && !document.querySelector('.adding-shortcut')) {
+    event.preventDefault();
+    closeFunction();
+  }
+}
+
+let addShortcutAbortController = null;
+
+function cleanUpAddingShortcuts() {
+  const buttonsAddingShortcut = [...document.querySelectorAll('.adding-shortcut')];
+
+  if (buttonsAddingShortcut.length) {
+    addShortcutAbortController.abort();
+
+    for (const button of buttonsAddingShortcut) {
+      button.classList.remove('adding-shortcut');
+    }
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+function addShortcut(event, action) {
+  const addButton = event.currentTarget;
+  const alreadyAdding = addButton.classList.contains('adding-shortcut');
+
+  cleanUpAddingShortcuts();
+
+  if (alreadyAdding) {
+    return;
+  }
+
+  addShortcutAbortController = new AbortController();
+
+  addButton.classList.add('adding-shortcut');
+
+  function captureShortcut(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta' || e.key === 'Shift') {
+      return;
+    }
+
+    if (e.key !== 'Escape') {
+      const newShortcut = {
+        key: e.key,
+        ctrl: e.ctrlKey,
+        alt: e.altKey,
+        meta: e.metaKey,
+        shift: e.shiftKey
+      };
+
+      shortcuts[action].commands.push(newShortcut);
+      saveShortcutsData();
+      refreshShortcutsDisplay();
+    }
+
+    addButton.classList.remove('adding-shortcut');
+    addShortcutAbortController.abort();
+  }
+
+  window.addEventListener('keydown', captureShortcut, {
+    signal: addShortcutAbortController.signal,
+    capture: true // Catch before other handlers
+  });
+}
+
+// eslint-disable-next-line no-unused-vars
+function startEditingShortcuts() {
+  const shortcutsTable = document.getElementById('shortcuts-settings');
+  shortcutsTable.classList.add('editing-shortcuts');
+  document.getElementById('done-editing-shortcuts-button').focus();
+}
+
+function stopEditingShortcuts() {
+  const shortcutsTable = document.getElementById('shortcuts-settings');
+  shortcutsTable.classList.remove('editing-shortcuts');
+  document.getElementById('edit-shortcuts-button').focus();
+
+  cleanUpAddingShortcuts();
+}
+
+// eslint-disable-next-line no-unused-vars
+function openSettingsDialog() {
+  refreshShortcutsDisplay();
+
+  const settingsDialog = document.getElementById('settings-dialog');
+  settingsDialog.showModal();
+}
+
+// eslint-disable-next-line no-unused-vars
+function closeSettingsDialog() {
+  const settingsDialog = document.getElementById('settings-dialog');
+  settingsDialog.close();
+
+  stopEditingShortcuts();
+}
+
+// eslint-disable-next-line no-unused-vars
+function setDefaultShortcuts() {
+  shortcuts = structuredClone(defaultShortcuts);
+  saveShortcutsData();
+  refreshShortcutsDisplay();
+}
+
+// eslint-disable-next-line no-unused-vars
+function clearAllShortcuts() {
+  for (const property in shortcuts) {
+    shortcuts[property].commands = [];
+  }
+
+  saveShortcutsData();
+  refreshShortcutsDisplay();
 }
 
 function setUserSelect(enabled) {
@@ -2120,6 +2521,8 @@ function calculateScreenDimensions() {
 }
 
 function init() {
+  loadShortcutsData();
+
   const {screenWidth, screenHeight} = calculateScreenDimensions();
   CANVAS_WIDTH = screenWidth;
   CANVAS_HEIGHT = screenHeight;
@@ -2265,14 +2668,62 @@ function init() {
 
 <body onmousemove="onCanvasMouseMove(event)">
   <!-- Toolbar Info Dialog -->
-  <dialog id="toolbar-option-info-dialog" aria-label="Option Info">
+  <dialog id="toolbar-option-info-dialog" aria-label="Option Info" onkeydown="escapeDialog(event, closeOptionInfoDialog)">
     <div class="modal-backdrop" onclick="if (event.target === this) { closeOptionInfoDialog() }">
       <div class="modal-foreground">
         <button autofocus class="close-button" aria-label="Close dialog" onclick="closeOptionInfoDialog()">
-          <span aria-hidden="true">❌&#65038;</span>
+          <span aria-hidden="true">❌</span>
         </button>
 
-        <div class="modal-content"></div>
+        <div class="modal-content" tabindex="-1"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Settings Dialog -->
+  <dialog id="settings-dialog" aria-labelledby="settings-title" onkeydown="escapeDialog(event, closeSettingsDialog)">
+    <div class="modal-backdrop" onclick="if (event.target === this) { closeSettingsDialog() }">
+      <div class="modal-foreground">
+        <button autofocus class="close-button" aria-label="Close dialog" onclick="closeSettingsDialog()">
+          <span aria-hidden="true">❌</span>
+        </button>
+
+        <div class="modal-content" tabindex="-1">
+          <h1 id="settings-title"><span aria-hidden="true">⚙️</span> Settings</h1>
+          <section id="shortcuts-settings" aria-labelledby="shortcuts-title">
+            <h2 id="shortcuts-title">
+              Keyboard Shortcuts
+              <button onclick="setDefaultShortcuts()">Set Defaults</button>
+              <button onclick="clearAllShortcuts()">Clear All</button>
+            </h2>
+
+            <fieldset role="list" aria-hidden="true" class="glossary">
+              <legend>Glossary</legend>
+              <dt><kbd class="meta-key"></kbd></dt> - <dd>Windows key or Command key</dd><br />
+              <dt><kbd class="alt-key"></kbd></dt> - <dd>Alt key or Option key</dd><br />
+              <dt><kbd class="control-key"></kbd></dt> - <dd>Control key</dd><br />
+              <dt><kbd class="shift-key"></kbd></dt> - <dd>Shift key</dd>
+            </fieldset>
+
+            <table id="shortcuts-table">
+              <thead>
+                <tr class="relative">
+                  <th>Action</th>
+                  <th>
+                    Shortcuts
+                  </th>
+                  <th class="cell-float-right">
+                    <button id="edit-shortcuts-button" onclick="startEditingShortcuts()"
+                        aria-label="Edit Shortcuts">Edit</button>
+                    <button id="done-editing-shortcuts-button" onclick="stopEditingShortcuts()"
+                        aria-label="Done Editing Shortcuts">Done Editing</button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="settings-shortcuts-table"></tbody>
+            </table>
+          </section>
+        </div>
       </div>
     </div>
   </dialog>
@@ -2418,7 +2869,7 @@ function init() {
           <label id="limitless-fill" aria-label="Limitless Fill" title="Limitless Fill"
               data-description="Toggle this off to restrict each fill bloom to a configured size and also allow for some targeting leeway to easily fill in stray blank spots.">
             <span aria-hidden="true">♾️</span>
-            <input type="checkbox" name="limitless-fill" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
+            <input type="checkbox" name="limitlessFill" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
           </label>
 
           <label>
@@ -2464,7 +2915,7 @@ function init() {
           <label id="limitless-erase" aria-label="Limitless Erase" title="Limitless Erase"
               data-description="Toggle this off to restrict each erasure bloom to a configured size and also allow for some targeting leeway to easily erase stray filled spots.">
             <span aria-hidden="true">♾️</span>
-            <input type="checkbox" name="limitless-erase" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
+            <input type="checkbox" name="limitlessErase" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
           </label>
 
           <label>
@@ -2498,9 +2949,16 @@ function init() {
       <div id="canvasWrapper"></div>
     </div>
 
+    <!-- Settings Button -->
+    <button id="settings-button" type="button" class="collapsible" onclick="openSettingsDialog()">
+      <span>
+        <span aria-hidden="true">⚙️</span> Settings
+      </span>
+    </button>
+
     <!-- Portfolio Link -->
-    <a id="portfolio-link" class="collapsible" href="https://alec-mitnik.github.io/" target="_blank" rel="author"
-        aria-label="Check out my other projects">
+    <a id="portfolio-link" class="collapsible" href="https://alec-mitnik.github.io/"
+        target="_blank" rel="author" aria-label="Check out my other projects">
       <img src="./images/PXL_Avatar_1B.jpg" alt="">
     </a>
   </main>
