@@ -89,6 +89,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: 'v',
+        code: 'KeyV',
+        alt: true,
       },
     ],
   },
@@ -97,6 +99,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: '1',
+        code: 'Digit1',
+        alt: true,
       },
     ],
   },
@@ -105,6 +109,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: '2',
+        code: 'Digit2',
+        alt: true,
       },
     ],
   },
@@ -113,6 +119,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: '3',
+        code: 'Digit3',
+        alt: true,
       },
     ],
   },
@@ -121,6 +129,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: 'c',
+        code: 'KeyC',
+        alt: true,
       },
     ],
   },
@@ -128,7 +138,9 @@ const defaultShortcuts = {
     displayName: 'Toggle Guidelines',
     commands: [
       {
-        key: 'g',
+        key: 'l',
+        code: 'KeyL',
+        alt: true,
       },
     ],
   },
@@ -137,7 +149,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: '0',
-        ctrl: true,
+        code: 'Numpad0',
+        alt: true,
       },
     ],
   },
@@ -146,6 +159,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: 'r',
+        code: 'KeyR',
+        alt: true,
       },
     ],
   },
@@ -154,6 +169,7 @@ const defaultShortcuts = {
     commands: [
       {
         key: 'z',
+        code: 'KeyZ',
         ctrl: true,
       },
     ],
@@ -163,10 +179,12 @@ const defaultShortcuts = {
     commands: [
       {
         key: 'y',
+        code: 'KeyY',
         ctrl: true,
       },
       {
         key: 'z',
+        code: 'KeyZ',
         ctrl: true,
         shift: true,
       },
@@ -177,6 +195,8 @@ const defaultShortcuts = {
     commands: [
       {
         key: 't',
+        code: 'KeyT',
+        alt: true,
       },
     ],
   },
@@ -213,7 +233,7 @@ window.addEventListener('keydown', (event) => {
 
   for (const property in shortcuts) {
     for (const shortcut of shortcuts[property].commands) {
-      if (event.key.toUpperCase() === shortcut.key.toUpperCase()
+      if ((event.key.toUpperCase() === shortcut.key.toUpperCase() || event.code === shortcut.code)
           && event.ctrlKey === !!shortcut.ctrl
           && event.shiftKey === !!shortcut.shift
           && event.altKey === !!shortcut.alt
@@ -2705,9 +2725,9 @@ function init() {
               <dt><kbd class="shift-key"></kbd></dt> - <dd>Shift key</dd>
             </fieldset>
 
-            <table id="shortcuts-table">
+            <table id="shortcuts-table" class="relative">
               <thead>
-                <tr class="relative">
+                <tr>
                   <th>Action</th>
                   <th>
                     Shortcuts
