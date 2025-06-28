@@ -2248,7 +2248,7 @@ function resetScaleAndPosition() {
   setCssVar('--canvas-offset-y', '50px');
 }
 
-function openOptionInfoDialog(emojiIcon, label, description) {
+function openOptionInfoDialog(emojiIcon, label, description, identifier) {
   const optionInfoDialog = document.getElementById('toolbar-option-info-dialog');
   const modalContent = optionInfoDialog.querySelector('.modal-content');
   modalContent.innerHTML = `
@@ -2256,7 +2256,7 @@ function openOptionInfoDialog(emojiIcon, label, description) {
     <ul>${description.split('  ').map(line => `<li>${line}</li>`).join('')}</ul>
   `;
 
-  const shortcutCommands = shortcuts[label.toLowerCase()];
+  const shortcutCommands = shortcuts[identifier]?.commands;
 
   if (shortcutCommands?.length) {
     modalContent.innerHTML += `
@@ -2580,7 +2580,7 @@ function init() {
       const element = event.currentTarget;
       const iconWrapper = element.querySelector('& > span');
 
-      openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
+      openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description, element.dataset.identifier);
     });
 
     // iOS Safari doesn't support contextmenu events, so need to implement long-press manually
@@ -2619,7 +2619,7 @@ function init() {
         setUserSelect(false);
 
         const iconWrapper = element.querySelector('& > span');
-        openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description);
+        openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description, element.dataset.identifier);
       }, 600);
     });
 
@@ -2734,25 +2734,26 @@ function init() {
 
       <div class="outer-menu">
         <button type="button" aria-label="View Canvas" title="View Canvas" onclick="viewCanvas()"
+            data-identifier="view_canvas"
             data-description="Hides everything but the canvas until the next interaction.">
           <span aria-hidden="true">👁️</span>
         </button>
 
         <div class="menu">
           <div role="radiogroup" aria-label="Tools">
-            <label aria-label="Brush" title="Brush"
+            <label aria-label="Brush" title="Brush" data-identifier="brush"
                 data-description="Select this tool to draw black outlines.  Fill and erasure blooms stop at outlines.  Erasing outlines themselves leaves the corresponding fill area blank but leaves the surrounding area untouched.  You can then fill the erased outline area as a way to effectively get colored outlines.">
               <span aria-hidden="true">🖌️</span>
               <input type="radio" name="tool" value="brush" aria-label="Brush" checked />
             </label>
 
-            <label aria-label="Fill" title="Fill"
+            <label aria-label="Fill" title="Fill" data-identifier="fill"
                 data-description="Select this tool to slowly fill a blank area with a configurable bloom of color, stopping at outlines.  Works with a single click/tap or by dragging.  Set all variances to 0 for a traditional solid fill.  Click/tap a filled area or the background outside the canvas to stop any fill blooms prematurely.">
               <span aria-hidden="true">🎆</span>
               <input type="radio" name="tool" value="fill" aria-label="Fill" />
             </label>
 
-            <label aria-label="Erase" title="Erase"
+            <label aria-label="Erase" title="Erase" data-identifier="erase"
                 data-description="Select this tool to slowly erase filled areas or outlines, whichever is targeted first.  Works with a single click/tap or by dragging.  Click/tap a blank area or the background outside the canvas to stop any erasure blooms prematurely.">
               <span aria-hidden="true">🧼</span>
               <input type="radio" name="tool" value="erase" aria-label="Erase" />
@@ -2761,12 +2762,14 @@ function init() {
 
           <div class="collapsible">
             <label id="show-guidelines" aria-label="Show Guidelines" title="Show Guidelines"
+                data-identifier="show_guidelines"
                 data-description="When toggled on, shows lines to help target the canvas center.">
               <span aria-hidden="true">📏</span>
               <input type="checkbox" name="show-guidelines" aria-label="Show Guidelines" />
             </label>
 
-            <button type="button" aria-label="Reset Scale and Position" title="Reset Scale and Position" onclick="resetScaleAndPosition()"
+            <button type="button" aria-label="Reset Scale and Position" title="Reset Scale and Position"
+                onclick="resetScaleAndPosition()" data-identifier="reset_scale"
                 data-description="Resets the canvas scale and position to their starting values.  In addition to the slider, canvas scale can be adjusted by pinching/spreading on a touchscreen or with the mouse wheel.  Canvas position can be adjusted by dragging with multiple fingers on a touchscreen or while holding the right or middle mouse button.">
               <span aria-hidden="true">🎯</span>
             </button>
@@ -2778,7 +2781,8 @@ function init() {
               <span id="canvasScaleValue">50%</span>
             </label>
 
-            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image" onclick="share()"
+            <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image"
+                onclick="share()"
                 data-description="Allows you to share your canvas image with others.">
               <span aria-hidden="true">💬</span>
             </button>
@@ -2791,16 +2795,19 @@ function init() {
 
           <div>
             <button type="button" aria-label="Reset Canvas" title="Reset Canvas" onclick="resetCanvas()"
+                data-identifier="reset_canvas"
                 data-description="Instantly erases all filled areas and outlines.  Can be undone the same as other actions.">
               <span aria-hidden="true">⬜</span>
             </button>
 
             <button id="undoButton" type="button" aria-label="Undo" title="Undo" onclick="undo()" disabled
+                data-identifier="undo"
                 data-description="Undoes the previous fill or outline change.  Only the last 10 changes are tracked.">
               <span aria-hidden="true">↩️</span>
             </button>
 
             <button id="redoButton" type="button" aria-label="Redo" title="Redo" onclick="redo()" disabled
+                data-identifier="redo"
                 data-description="Redoes the most recently undone fill or outline change.">
               <span aria-hidden="true">↪️</span>
             </button>
@@ -2808,6 +2815,7 @@ function init() {
         </div>
 
         <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse"
+            data-identifier="toggle_toolbar_collapse"
             data-description="Toggles between a collapsed, minimalist toolbar and the full toolbar.">
           <span aria-hidden="true">
             <span>➖</span>
@@ -2835,29 +2843,34 @@ function init() {
         </div>
 
         <div>
-          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern" onclick="generateEllipsesPattern()"
+          <button type="button" aria-label="Generate Ellipses Pattern" title="Generate Ellipses Pattern"
+              onclick="generateEllipsesPattern()"
               data-description="Generates a random smattering of elliptical outlines.  Can be stacked or undone/reattempted as desired.">
             <span aria-hidden="true">⚫</span>
           </button>
 
-          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern" onclick="generateRectanglesPattern()"
+          <button type="button" aria-label="Generate Rectangles Pattern" title="Generate Rectangles Pattern"
+              onclick="generateRectanglesPattern()"
               data-description="Generates a random smattering of orthogonal outlines.  Can be stacked or undone/reattempted as desired.">
             <span aria-hidden="true">⬛</span>
           </button>
 
-          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern" onclick="generateDiamondsPattern()"
+          <button type="button" aria-label="Generate Diamonds Pattern" title="Generate Diamonds Pattern"
+              onclick="generateDiamondsPattern()"
               data-description="Generates a random smattering of diagonal outlines.  Can be stacked or undone/reattempted as desired.">
             <span aria-hidden="true">🔷</span>
           </button>
         </div>
 
         <div>
-          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template" onclick="loadTemplate('heart-rose.png')"
+          <button type="button" aria-label="Add Heart Rose Template" title="Add Heart Rose Template"
+              onclick="loadTemplate('heart-rose.png')"
               data-description="Adds a heart rose template outline, centered on the canvas.">
             <span aria-hidden="true">🌹</span>
           </button>
 
-          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template" onclick="loadTemplate('palm-tree.png')"
+          <button type="button" aria-label="Add Palm Tree Template" title="Add Palm Tree Template"
+              onclick="loadTemplate('palm-tree.png')"
               data-description="Adds a palm tree template outline, centered on the canvas.">
             <span aria-hidden="true">🌴</span>
           </button>
@@ -2880,7 +2893,7 @@ function init() {
           </label>
         </div>
 
-        <label aria-label="Color for Fill" title="Color for Fill"
+        <label aria-label="Color for Fill" title="Color for Fill" data-identifier="fill_color"
             data-description="Selects the starting color for fill blooms.">
           <span style="visibility: hidden;">🎨</span>
           <input type="color" name="fillColor" oninput="onFillColorChange(event)" />
