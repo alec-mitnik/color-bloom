@@ -399,6 +399,7 @@ main {
   @media (hover: hover) {
     &:hover {
       background: black;
+      box-shadow: 0 0 6px 2px #f9b70f;
     }
   }
 

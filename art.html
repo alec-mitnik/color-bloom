@@ -24,11 +24,16 @@
 "use strict"
 
 /* TODO:
+ * - Move into own folder and split out scripts
+ * - Better shortcut handling (prevent duplicates, display and store robustly, warn about reserved combos...)
  * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer?
  * - Generate spiral pattern
  * - More template images
  * - Reveal options more gradually?
- * - Persist gallery of past images as base 64 encoded strings?
+ * - Persist whole history?
+ * - Persist gallery of past images?
+ * - Support rotating the canvas (based on orientation or manual)
+ * - Support share/download quality selection, at least full quality vs. default
  * - Support uploading own images as templates, or maybe as translucent overlays to trace?
  * - Support color selection for brush?
  * - Support moving canvas contents around?
@@ -82,6 +87,7 @@ let clickTimeoutId;
 const touches = new Map();
 let startingTouchDistance = NaN;
 let startingScaleValue = NaN;
+let canvasDB;
 
 const defaultShortcuts = {
   view_canvas: {
@@ -183,7 +189,7 @@ const defaultShortcuts = {
         ctrl: true,
       },
       {
-        key: 'z',
+        key: 'Z',
         code: 'KeyZ',
         ctrl: true,
         shift: true,
@@ -205,11 +211,7 @@ const defaultShortcuts = {
 let shortcuts = structuredClone(defaultShortcuts);
 
 window.addEventListener('DOMContentLoaded', init);
-window.addEventListener('pageshow', loadShortcutsData);
-
-document.fonts.ready.then(() => {
-  document.querySelector('main').inert = false;
-});
+window.addEventListener('pageshow', loadAllData);
 
 window.addEventListener('resize', () => {
   setRelativeCanvasOffsetsWithLimits(0, 0);
@@ -233,7 +235,12 @@ window.addEventListener('keydown', (event) => {
 
   for (const property in shortcuts) {
     for (const shortcut of shortcuts[property].commands) {
-      if ((event.key.toUpperCase() === shortcut.key.toUpperCase() || event.code === shortcut.code)
+      const lastChar = event.code.charAt(event.code.length - 1);
+      const isNumeric = !isNaN(parseInt(lastChar));
+
+      if ((event.key.toUpperCase() === shortcut.key.toUpperCase()
+          || event.code === shortcut.code
+          || (isNumeric && shortcut.code.endsWith(lastChar)))
           && event.ctrlKey === !!shortcut.ctrl
           && event.shiftKey === !!shortcut.shift
           && event.altKey === !!shortcut.alt
@@ -920,7 +927,10 @@ function download() {
 
   const link = document.createElement('a');
   link.download = 'color-bloom-wallpaper';
-  link.href = canvas.toDataURL(`image/webp`);
+  // Default quality webp is about 3/5ths the file size of a default quality jpeg,
+  // and about 1/6th the file size of full quality webp, jpeg, or png.
+  // For 1920x1080, that's about 750KB, 1.25MB, and 4.5MB respectively.
+  link.href = canvas.toDataURL('image/webp');
   link.click();
   link.remove();
 
@@ -942,6 +952,8 @@ function undo() {
     if (historyType === "brush" || historyType === "both") {
       undoBrush();
     }
+
+    saveCanvasData();
 
     combinedHistoryIndex++;
     updateHistoryButtons();
@@ -1025,6 +1037,7 @@ function redo() {
       redoBrush();
     }
 
+    saveCanvasData();
     updateHistoryButtons();
   }
 }
@@ -1721,6 +1734,8 @@ function onCanvasMouseUp(event) {
 
       handleClick(event.x, event.y);
     }
+
+    saveCanvasData();
   }
 }
 
@@ -1790,6 +1805,8 @@ function onCanvasTouchStart(event) {
       stopFilling();
     }
 
+    saveCanvasData();
+
     document.getElementById("contentWrapper").classList.add("positioning");
 
     let totalDistance = 0, pairCount = 0;
@@ -1852,6 +1869,8 @@ function onCanvasTouchEnd(event) {
 
         handleClick(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
       }
+
+      saveCanvasData();
     }
   } else if (event.touches.length > 1) {
     let totalDistance = 0, pairCount = 0;
@@ -1883,6 +1902,7 @@ function onCanvasMouseEnter(event) {
     finishDrawing();
     stopFilling();
     setCssVar('--toolbar-pointer-events', 'all');
+    saveCanvasData();
   }
 
   if (!interactive || event.buttons === 1 || event.buttons === 0) {
@@ -1913,6 +1933,7 @@ function onContextMenu(event) {
   event.preventDefault();
   finishDrawing();
   stopFilling();
+  saveCanvasData();
 }
 
 function stopGrowth() {
@@ -1936,6 +1957,7 @@ function stopGrowth() {
     }
 
     drawFillImageData();
+    saveCanvasData();
   }
 }
 
@@ -2018,8 +2040,6 @@ function generateEllipsesPattern() {
   drawImageData(data);
 
   canvas.remove();
-
-  updateHistoryButtons();
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -2065,8 +2085,6 @@ function generateRectanglesPattern() {
   drawImageData(data);
 
   canvas.remove();
-
-  updateHistoryButtons();
 }
 
 // eslint-disable-next-line no-unused-vars
@@ -2120,8 +2138,6 @@ function generateDiamondsPattern() {
   drawImageData(data);
 
   canvas.remove();
-
-  updateHistoryButtons();
 }
 
 // TODO
@@ -2175,8 +2191,6 @@ function generateDiamondsPattern() {
   drawImageData(data);
 
   canvas.remove();
-
-  updateHistoryButtons();
 } */
 
 function imageTo2DArray(image) {
@@ -2217,8 +2231,6 @@ function imageTo2DArray(image) {
   drawImageData(data, true);
 
   canvas.remove();
-
-  updateHistoryButtons();
 }
 
 function drawImageData(data, ensureOutline = false) {
@@ -2296,7 +2308,7 @@ function closeOptionInfoDialog() {
 
 function getShortcutString(shortcut, ordinal) {
   // Meta is Windows or Command key
-  const {key, ctrl, alt, meta, shift} = shortcut;
+  const {key, code, ctrl, alt, meta, shift} = shortcut;
   const keysArray = [];
 
   if (meta) {
@@ -2319,11 +2331,15 @@ function getShortcutString(shortcut, ordinal) {
 
   if (key === 'Control' || key === 'Alt' || key === 'Meta' || key === 'Shift') {
     displayedKey = '...';
-  }
-
-  if (key === ' ') {
-    console.log(event);
+  } else if (key === ' ') {
     displayedKey = 'Spacebar';
+  } else {
+    const lastChar = code.charAt(code.length - 1);
+    const isNumeric = !isNaN(parseInt(lastChar));
+
+    if (isNumeric) {
+      displayedKey = lastChar;
+    }
   }
 
   keysArray.push(`<kbd>${displayedKey}</kbd>`);
@@ -2338,9 +2354,9 @@ function loadShortcutsData() {
     if (loadedShortcutsData) {
       const loadedShortcuts = JSON.parse(loadedShortcutsData);
 
-      for (const property in loadedShortcuts) {
-        if (shortcuts[property]) {
-          shortcuts[property].commands = loadedShortcuts[property].commands;
+      for (const action in loadedShortcuts) {
+        if (shortcuts[action]) {
+          shortcuts[action].commands = loadedShortcuts[action].commands;
         }
       }
     }
@@ -2349,12 +2365,348 @@ function loadShortcutsData() {
   }
 }
 
+function commandsEqual(a, b) {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  for (let i = 0; i < a.length; i++) {
+    const aCommand = a[i];
+    const bCommand = b[i];
+    const aEntries = Object.entries(aCommand);
+    const bEntries = Object.entries(bCommand);
+
+    if (aEntries.length !== bEntries.length) {
+      return false;
+    }
+
+    for (let j = 0; j < aEntries.length; j++) {
+      if (aEntries[j][0] !== bEntries[j][0] || aEntries[j][1] !== bEntries[j][1]) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function getCustomizedShortcuts() {
+  const customizations = {};
+
+  // Compared to for...in, safely omits prototype properties
+  for (const action of Object.keys(shortcuts)) {
+    const current = shortcuts[action];
+    const defaults = defaultShortcuts[action];
+
+    // If action doesn't exist in defaults, it's completely custom
+    if (!defaults) {
+      customizations[action] = current;
+      continue;
+    }
+
+    // Compare the commands array (the important part for shortcuts)
+    const currentCommands = current.commands || [];
+    const defaultCommands = defaults.commands || [];
+
+    // Check if commands are different
+    const commandsChanged = !commandsEqual(currentCommands, defaultCommands);
+
+    if (commandsChanged) {
+      customizations[action] = current;
+    }
+  }
+
+  return customizations;
+}
+
 function saveShortcutsData() {
   try {
-    localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
+    const changedShortcuts = getCustomizedShortcuts();
+    localStorage.setItem('shortcuts', JSON.stringify(changedShortcuts));
   } catch (e) {
     console.warn(e);
   }
+}
+
+// Takes too much memory for local storage
+/* function loadCanvasImage(imageDataURL, forFill) {
+  if (forFill) {
+    fillPixelsChanged = false;
+  } else {
+    brushPixelsChanged = false;
+  }
+
+  const canvas = forFill ? getFillCanvas() : getBrushCanvas();
+  canvas.src = imageDataURL;
+
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => {
+    const pixelGrid = forFill ? getFillPixelGrid() : getBrushPixelGrid();
+    const ctx = canvas.getContext('2d', {willReadFrequently: true});
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const imageData = ctx.getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    const data = imageData.data;
+
+    if (forFill) {
+      fillImageDataHistory[fillHistoryIndex] = imageData;
+    }
+
+    for (let i = 0; i < CANVAS_WIDTH; i++) {
+      for (let j = 0; j < CANVAS_HEIGHT; j++) {
+        const index = (j * CANVAS_WIDTH + i) * 4;
+        const r = data[index];
+        const g = data[index + 1];
+        const b = data[index + 2];
+        let a = data[index + 3] / 255;
+
+        let {h, s, l} = rgb2hsl(r, g, b);
+
+        if (a > 0) {
+          const pixel = {x: i, y: j, h, s, l, a};
+          pixelGrid[i][j] = pixel;
+
+          if (forFill) {
+            fillPixelsChanged = true;
+          } else {
+            brushPixelsChanged = true;
+          }
+        }
+      }
+    }
+
+    if (forFill) {
+      if (!fillPixelsChanged) {
+        undoFill(false);
+      }
+    } else if (!brushPixelsChanged) {
+      undoBrush(false);
+    }
+  };
+
+  image.src = imageDataURL;
+} */
+
+class CanvasIndexedDB {
+  constructor(dbName = 'ColorBloomArtMaker', version = 1) {
+    this.dbName = dbName;
+    this.version = version;
+  }
+
+  async openDB() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.dbName, this.version);
+
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+
+        if (!db.objectStoreNames.contains('canvases')) {
+          db.createObjectStore('canvases', { keyPath: 'id' });
+        }
+      };
+    });
+  }
+
+  async save(canvas, id) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(async (blob) => {
+        try {
+          const db = await this.openDB();
+          const transaction = db.transaction(['canvases'], 'readwrite');
+          const store = transaction.objectStore('canvases');
+
+          await store.put({
+            id: id,
+            blob: blob,
+            timestamp: new Date(),
+            width: canvas.width,
+            height: canvas.height
+          });
+
+          resolve(blob.size);
+        } catch (error) {
+          reject(error);
+        }
+      }, 'image/webp', 1); // Lossless
+    });
+  }
+
+  async load(canvas, id, callback = () => {}) {
+    try {
+      const db = await this.openDB();
+
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(['canvases'], 'readonly');
+        const store = transaction.objectStore('canvases');
+        const request = store.get(id);
+
+        request.onsuccess = () => {
+          const result = request.result;
+
+          if (result?.blob) {
+            const url = URL.createObjectURL(result.blob);
+            const img = new Image();
+
+            img.onload = () => {
+              const ctx = canvas.getContext('2d');
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              URL.revokeObjectURL(url);
+
+              callback();
+              resolve(true);
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(url);
+              reject(img.error);
+            };
+            img.src = url;
+          } else {
+            callback();
+            resolve(false);
+          }
+        };
+
+        request.onerror = () => {
+          callback();
+          reject(request.error);
+        };
+      });
+    } catch (error) {
+      console.error(`Failed to load canvas '${id}':`, error);
+    }
+  }
+}
+
+async function loadCanvasData() {
+  if (combinedHistory.length > 1) {
+    return;
+  }
+
+  if (!canvasDB) {
+    canvasDB = new CanvasIndexedDB();
+  }
+
+  storeBrushHistory();
+  storeFillHistory();
+  storeCombinedHistory("both");
+
+  const blankFillDataURL = getFillCanvas().toDataURL();
+  const loadFillCanvasPromise = canvasDB.load(getFillCanvas(), 'fill', () => {
+    const canvas = getFillCanvas();
+    const newFillDataURL = canvas.toDataURL();
+
+    if (newFillDataURL === blankFillDataURL) {
+      undoFill(false);
+    } else {
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      fillImageDataHistory[fillHistoryIndex] = imageData;
+
+      const pixelGrid = getFillPixelGrid();
+
+      for (let i = 0; i < CANVAS_WIDTH; i++) {
+        for (let j = 0; j < CANVAS_HEIGHT; j++) {
+          const index = (j * CANVAS_WIDTH + i) * 4;
+          const r = data[index];
+          const g = data[index + 1];
+          const b = data[index + 2];
+          let a = data[index + 3] / 255;
+
+          let {h, s, l} = rgb2hsl(r, g, b);
+
+          if (a > 0) {
+            const pixel = {x: i, y: j, h, s, l, a};
+            pixelGrid[i][j] = pixel;
+          }
+        }
+      }
+    }
+  });
+
+  const blankBrushDataURL = getBrushCanvas().toDataURL();
+  const loadBrushCanvasPromise = canvasDB.load(getBrushCanvas(), 'brush', () => {
+    const canvas = getBrushCanvas();
+    const newBrushDataURL = canvas.toDataURL();
+
+    if (newBrushDataURL === blankBrushDataURL) {
+      undoBrush(false);
+    } else {
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      const pixelGrid = getBrushPixelGrid();
+
+      for (let i = 0; i < CANVAS_WIDTH; i++) {
+        for (let j = 0; j < CANVAS_HEIGHT; j++) {
+          const index = (j * CANVAS_WIDTH + i) * 4;
+          const r = data[index];
+          const g = data[index + 1];
+          const b = data[index + 2];
+          let a = data[index + 3] / 255;
+
+          let {h, s, l} = rgb2hsl(r, g, b);
+
+          if (a > 0) {
+            const pixel = {x: i, y: j, h, s, l, a};
+            pixelGrid[i][j] = pixel;
+          }
+        }
+      }
+    }
+  });
+
+  await Promise.all([document.fonts.ready, loadFillCanvasPromise, loadBrushCanvasPromise]);
+  document.querySelector('main').inert = false;
+
+  // Takes too much memory for local storage
+  /* try {
+    const loadedBrushCanvasData = localStorage.getItem("brushCanvas");
+    const loadedFillCanvasData = localStorage.getItem("fillCanvas");
+
+    if (loadedBrushCanvasData && loadedFillCanvasData) {
+      storeBrushHistory();
+      storeFillHistory();
+      storeCombinedHistory("both");
+
+      loadCanvasImage(loadedBrushCanvasData, false);
+      loadCanvasImage(loadedFillCanvasData, true);
+    }
+  } catch (e) {
+    console.warn("Unable to access local storage:", e);
+  } */
+}
+
+function saveCanvasData() {
+  if (!canvasDB) {
+    canvasDB = new CanvasIndexedDB();
+  }
+
+  canvasDB.save(getFillCanvas(), 'fill');
+  canvasDB.save(getBrushCanvas(), 'brush');
+
+  // Takes too much memory for local storage
+  /* try {
+    localStorage.setItem('brushCanvas', getBrushCanvas().toDataURL('image/webp'));
+
+    // Full quality takes a lot of memory, but it's bad to have the image degrade on load.
+    // For 1920x1080, takes about 4.5 MB out of 5-10 allotted for local storage.
+    localStorage.setItem('fillCanvas', getFillCanvas().toDataURL('image/webp', 1));
+  } catch (e) {
+    console.warn(e);
+  } */
+}
+
+function loadAllData() {
+  loadShortcutsData();
+  loadCanvasData();
 }
 
 function refreshShortcutsDisplay() {
@@ -2446,10 +2798,11 @@ function addShortcut(event, action) {
     if (e.key !== 'Escape') {
       const newShortcut = {
         key: e.key,
-        ctrl: e.ctrlKey,
-        alt: e.altKey,
-        meta: e.metaKey,
-        shift: e.shiftKey
+        code: e.code,
+        ...(e.ctrlKey && { ctrl: true }),
+        ...(e.altKey && { alt: true }),
+        ...(e.metaKey && { meta: true }),
+        ...(e.shiftKey && { shift: true }),
       };
 
       shortcuts[action].commands.push(newShortcut);
@@ -2532,8 +2885,10 @@ function calculateScreenDimensions() {
   // Only Apple devices don't swap screen dimensions with orientation,
   // but since browser height extends fully across the screen on mobile devices
   // (even if split horizontally), we can detect when the device is sideways
-  // (therefore mobile) and when browser height matches the screen width instead
-  if (sideways && window.outerHeight === window.screen.width) {
+  // (therefore mobile) and when browser height matches the screen width instead.
+  // In this case, we want the same dimensions as portrait regardless of orientation,
+  // so that loaded canvas data isn't mismatched due to orientation.
+  if (sideways && window.outerHeight !== window.screen.width) {
     return {screenWidth: window.screen.height, screenHeight: window.screen.width};
   }
 
@@ -2541,8 +2896,6 @@ function calculateScreenDimensions() {
 }
 
 function init() {
-  loadShortcutsData();
-
   const {screenWidth, screenHeight} = calculateScreenDimensions();
   CANVAS_WIDTH = screenWidth;
   CANVAS_HEIGHT = screenHeight;
@@ -2575,6 +2928,8 @@ function init() {
   brushCanvasHistory.unshift(brushCanvas);
 
   combinedHistory.unshift("");
+
+  loadAllData();
 
   setCssVar('--canvas-width', `${CANVAS_WIDTH}px`);
   setCssVar('--canvas-height', `${CANVAS_HEIGHT}px`);
