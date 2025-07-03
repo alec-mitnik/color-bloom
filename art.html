@@ -24,23 +24,23 @@
 "use strict"
 
 /* TODO:
- * - Move into own folder and split out scripts
- * - Better shortcut handling (prevent duplicates, display and store robustly, warn about reserved combos...)
- * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer?
- * - Generate spiral pattern
- * - More template images
- * - Reveal options more gradually?
  * - Persist whole history?
+ * - Support stored fill settings history/presets?
  * - Persist gallery of past images?
  * - Support rotating the canvas (based on orientation or manual)
+ * - Move into own folder and split out scripts
+ * - Reveal options more gradually?
  * - Support share/download quality selection, at least full quality vs. default
+ * - Better shortcut handling (prevent duplicates, display and store robustly, warn about reserved combos...)
+ * - Generate spiral pattern
+ * - More template images
  * - Support uploading own images as templates, or maybe as translucent overlays to trace?
  * - Support color selection for brush?
  * - Support moving canvas contents around?
- * - Support stored fill settings history/presets?
  * - Support custom canvas sizes?
  * - Support width varying by speed of strokes or pressure of touch/stylus?
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
+ * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer?
  */
 
 let CANVAS_WIDTH = 1920;
@@ -3341,7 +3341,7 @@ function init() {
       <div class="guide vertical cursor"></div>
       <div class="guide horizontal cursor"></div>
 
-      <div id="canvasWrapper"></div>
+      <div id="canvasWrapper" tabindex="0" aria-label="Canvas"></div>
     </div>
 
     <!-- Settings Button -->
