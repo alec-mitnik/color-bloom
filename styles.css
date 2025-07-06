@@ -97,6 +97,9 @@ kbd {
   z-index: -1;
   pointer-events: none;
   overflow: hidden;
+  white-space: nowrap;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 button {
@@ -118,6 +121,19 @@ body, main, #contentWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.row {
+  display: flex;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-small {
+  gap: 8px;
 }
 
 #contentWrapper {
@@ -434,6 +450,12 @@ main {
   }
 }
 
+input[type='color'] {
+  &:has(:focus-visible) {
+    border: 4px solid red !important;
+  }
+}
+
 dialog {
   margin: auto;
   position: fixed;
@@ -505,6 +527,16 @@ dialog {
                 opacity: 0.5;
                 padding: 0 2px;
               }
+            }
+          }
+
+          #shortcuts-title-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+
+            #shortcuts-title {
+              flex-grow: 1;
             }
           }
         }
@@ -587,24 +619,6 @@ dialog {
           &:not(:first-child) {
             border-top: 1px solid #00000020;
           }
-
-          .cell-float-right {
-            position: absolute;
-            top: 0;
-            right: 0;
-          }
-
-          > :has(+ .cell-float-right) {
-            &::after {
-              content: 'Done Editing' / '';
-              display: inline-block;
-              padding: 0 16px;
-              opacity: 0;
-              position: relative;
-              z-index: -1;
-              pointer-events: none;
-            }
-          }
         }
 
         th, td {
@@ -639,16 +653,18 @@ dialog {
           }
         }
 
-        button.add-shortcut {
+        .add-shortcut-container {
           margin: 2px 0;
 
-          &::before {
-            content: 'Add';
+          &:not(.adding-shortcut) {
+            button.awaiting-input {
+              display: none;
+            }
           }
 
           &.adding-shortcut {
-            &::before {
-              content: 'Awaiting input...';
+            button.add-shortcut {
+              display: none;
             }
           }
         }
