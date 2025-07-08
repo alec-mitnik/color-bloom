@@ -1265,10 +1265,11 @@ function smoothScale(targetScale) {
   smoothScaleAnimationId = requestAnimationFrame(scaleStep);
 }
 
-function onCanvasScaleValueChange(value, spanId) {
-  const valueSpan = document.getElementById(spanId);
+function onCanvasScaleValueChange(value) {
+  const valueSpan = document.getElementById('canvasScaleValue');
   valueSpan.innerText = `${value}%`;
-  event.currentTarget.ariaValueText = valueSpan.innerText;
+  const slider = document.getElementById('canvasScale');
+  slider.ariaValueText = valueSpan.innerText;
 
   smoothScale(value / 100);
 }
@@ -1561,7 +1562,7 @@ function onCanvasTouchMove(event) {
         if (!isNaN(storedScaleValue)) {
           const scaleInput = document.getElementById('canvasScale');
           scaleInput.value = storedScaleValue;
-          onCanvasScaleValueChange(scaleInput.value, 'canvasScaleValue');
+          onCanvasScaleValueChange(scaleInput.value);
 
           storedScaleValue = NaN;
         }
@@ -1965,7 +1966,7 @@ function onCanvasScroll(event) {
     scaleInput.value = +scaleInput.value + +scaleInput.step;
   }
 
-  onCanvasScaleValueChange(scaleInput.value, 'canvasScaleValue');
+  onCanvasScaleValueChange(scaleInput.value);
 }
 
 function onContextMenu(event) {
@@ -2324,7 +2325,7 @@ function drawImageData(data, ensureOutline = false) {
 function resetScaleAndPosition() {
   const scaleInput = document.getElementById('canvasScale');
   scaleInput.value = 50;
-  onCanvasScaleValueChange(scaleInput.value, 'canvasScaleValue');
+  onCanvasScaleValueChange(scaleInput.value);
 
   setCssVar('--canvas-offset-x', '0px');
   setCssVar('--canvas-offset-y', '50px');
@@ -3260,7 +3261,7 @@ function init() {
             <label>
               Canvas Scale
               <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
-                  aria-valuetext="50%" oninput="onCanvasScaleValueChange(event.currentTarget.value, 'canvasScaleValue')" />
+                  aria-valuetext="50%" oninput="onCanvasScaleValueChange(event.currentTarget.value)" />
               <span id="canvasScaleValue" aria-hidden="true">50%</span>
             </label>
 
