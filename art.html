@@ -2786,7 +2786,8 @@ function refreshShortcutsDisplay() {
     }
   }
 
-  shortcutsTableBody.innerHTML = '';
+  // Important to use instead of `innerHTML = ""` for proper event listener cleanup
+  shortcutsTableBody.replaceChildren();
 
   for (const property in shortcuts) {
     const shortcutsListId = `${property.replace('_', '-')}-shortcuts`;
