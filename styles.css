@@ -103,7 +103,10 @@ kbd {
 }
 
 button {
-  appearance: none;
+  /* Easy CSS reset */
+  all: unset;
+  outline: revert;
+
   color: inherit;
   font-family: inherit;
 }
@@ -331,12 +334,10 @@ canvas {
     }
 
     input {
-      appearance: none;
-      background: transparent;
-      margin: 0;
-      padding: 0;
-      border-radius: 0;
-      border: none;
+      /* Easy CSS reset */
+      all: unset;
+      outline: revert;
+
       position: absolute;
       top: 0;
       left: 0;
@@ -440,7 +441,6 @@ main {
 
 #settings-button {
   left: 1.25rem;
-  appearance: none;
   font-size: inherit;
   color: white;
 
@@ -578,6 +578,8 @@ dialog {
       }
 
       h1 {
+        /* Ensure some space below the modal close button */
+        min-height: 32px;
         font-weight: bold;
         font-size: 1.5rem;
         padding-right: 48px;
