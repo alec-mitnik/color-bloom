@@ -172,7 +172,7 @@ body, main, #contentWrapper {
     }
 
     &.cursor {
-      @media (hover: none) {
+      @media not ((hover: hover) and (pointer: fine)) {
         display: none;
       }
 
@@ -327,7 +327,7 @@ canvas {
       border-color: var(--selected-fill-color);
     }
 
-    @media (hover: hover) {
+    @media (hover: hover) and (pointer: fine) {
       &:hover {
         background-color: black;
       }
@@ -374,7 +374,7 @@ canvas {
   }
 
   button {
-    @media (hover: hover) {
+    @media (hover: hover) and (pointer: fine) {
       &:hover:not(:disabled) {
         background-color: black;
       }
@@ -426,7 +426,7 @@ main {
   justify-content: center;
   align-items: center;
 
-  @media (hover: hover) {
+  @media (hover: hover) and (pointer: fine) {
     &:hover {
       background: black;
       box-shadow: 0 0 6px 2px #f9b70f;
@@ -566,7 +566,7 @@ dialog {
         padding: 3px 6px;
         user-select: none;
 
-        @media (hover: hover) {
+        @media (hover: hover) and (pointer: fine) {
           &:hover {
             background: #bbbbbb80;
           }
@@ -708,7 +708,7 @@ dialog {
     padding: 0;
     font-family: sans-serif;
 
-    @media (hover: hover) {
+    @media (hover: hover) and (pointer: fine) {
       &:hover {
         background: #bbbbbb80;
       }
