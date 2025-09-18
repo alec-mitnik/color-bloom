@@ -111,9 +111,6 @@ button, label, input:not([type="range"]) {
 
   outline: revert;
 
-  /* Prevent double-tap from zooming in on mobile */
-  /* touch-action: manipulation; */
-
   /* Prevent long-press magnifier on mobile */
   -webkit-touch-callout: none;
 

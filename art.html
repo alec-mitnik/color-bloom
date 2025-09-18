@@ -3004,6 +3004,9 @@ function calculateScreenDimensions() {
   return {screenWidth: window.screen.width, screenHeight: window.screen.height};
 }
 
+// eslint-disable-next-line no-unused-vars
+let fingerDownFromToolTipLongPress = false;
+
 function init() {
   const {screenWidth, screenHeight} = calculateScreenDimensions();
   CANVAS_WIDTH = screenWidth;
@@ -3102,6 +3105,8 @@ function init() {
         // Temporarily disable future text selection
         setUserSelect(false);
 
+        fingerDownFromToolTipLongPress = true;
+
         const iconWrapper = element.querySelector('& > span');
         openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description, element.dataset.identifier);
       }, 600);
@@ -3111,6 +3116,10 @@ function init() {
       for (const touch of event.changedTouches) {
         globalTouches.delete(touch.identifier);
       }
+
+      // For standalone apps on mobile, the option info dialog
+      // would close when releasing the long press
+      setTimeout(() => fingerDownFromToolTipLongPress = false);
 
       // If the popup was opened by a long-press, prevent the context menu from triggering
       if (longPressTimeoutId == null && longPressTouchId != null) {
@@ -3155,7 +3164,7 @@ function init() {
 
   <!-- Toolbar Info Dialog -->
   <dialog id="toolbar-option-info-dialog" aria-label="Option Info" onkeydown="escapeDialog(event, closeOptionInfoDialog)">
-    <div class="modal-backdrop" onclick="if (event.target === this) { closeOptionInfoDialog() }">
+    <div class="modal-backdrop" onclick="if (event.target === this && !fingerDownFromToolTipLongPress) { closeOptionInfoDialog() }">
       <div class="modal-foreground">
         <button autofocus class="close-button" aria-label="Close dialog" onclick="closeOptionInfoDialog()">
           <span aria-hidden="true"></span>
