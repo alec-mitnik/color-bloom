@@ -3119,7 +3119,7 @@ function init() {
 
       // For standalone apps on mobile, the option info dialog
       // would close when releasing the long press
-      setTimeout(() => fingerDownFromToolTipLongPress = false);
+      setTimeout(() => fingerDownFromToolTipLongPress = false, 50);
 
       // If the popup was opened by a long-press, prevent the context menu from triggering
       if (longPressTimeoutId == null && longPressTouchId != null) {
