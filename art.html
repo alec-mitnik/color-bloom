@@ -2353,10 +2353,19 @@ function openOptionInfoDialog(emojiIcon, label, description, identifier) {
   optionInfoDialog.showModal();
 }
 
-// eslint-disable-next-line no-unused-vars
 function closeOptionInfoDialog() {
   const optionInfoDialog = document.getElementById('toolbar-option-info-dialog');
   optionInfoDialog.close();
+}
+
+function onClickOptionInfoDialogBackdrop(event) {
+  if (event.target === event.currentTarget) {
+    if (fingerDownFromToolTipLongPress) {
+      event.preventDefault();
+    } else {
+      closeOptionInfoDialog()
+    }
+  }
 }
 
 /*
@@ -3004,7 +3013,6 @@ function calculateScreenDimensions() {
   return {screenWidth: window.screen.width, screenHeight: window.screen.height};
 }
 
-// eslint-disable-next-line no-unused-vars
 let fingerDownFromToolTipLongPress = false;
 
 function init() {
@@ -3164,7 +3172,7 @@ function init() {
 
   <!-- Toolbar Info Dialog -->
   <dialog id="toolbar-option-info-dialog" aria-label="Option Info" onkeydown="escapeDialog(event, closeOptionInfoDialog)">
-    <div class="modal-backdrop" onclick="if (event.target === this && !fingerDownFromToolTipLongPress) { closeOptionInfoDialog() }">
+    <div class="modal-backdrop" onclick="onClickOptionInfoDialogBackdrop(event)">
       <div class="modal-foreground">
         <button autofocus class="close-button" aria-label="Close dialog" onclick="closeOptionInfoDialog()">
           <span aria-hidden="true"></span>
