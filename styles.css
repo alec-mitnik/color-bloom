@@ -117,13 +117,13 @@ button:not(:disabled), a {
 
 button, label, input {
   /* Prevent double-tap from zooming in on mobile */
-  touch-action: manipulation;
+  touch-action: manipulation !important;
 
   /* Prevent long-press magnifier on mobile */
-  -webkit-touch-callout: none;
+  -webkit-touch-callout: none !important;
 
   /* Prevent text selection */
-  user-select: none;
+  user-select: none !important;
 }
 
 body, main, #contentWrapper {
