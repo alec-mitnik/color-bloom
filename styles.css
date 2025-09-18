@@ -115,9 +115,15 @@ button:not(:disabled), a {
   cursor: pointer;
 }
 
-button, input {
+button, label, input {
   /* Prevent double-tap from zooming in on mobile */
   touch-action: manipulation;
+
+  /* Prevent long-press magnifier on mobile */
+  -webkit-touch-callout: none;
+
+  /* Prevent text selection */
+  user-select: none;
 }
 
 body, main, #contentWrapper {
@@ -300,8 +306,6 @@ canvas {
     font-size: 2rem;
     position: relative;
     border-radius: 8px;
-    user-select: none;
-    -webkit-touch-callout: none;
   }
 
   &:has(#toggle-collapse :checked) {
