@@ -232,6 +232,7 @@ canvas {
 }
 
 #contentWrapper, canvas {
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -567,7 +568,6 @@ dialog {
         line-height: 1;
         font-size: 1rem;
         padding: 3px 6px;
-        user-select: none;
 
         @media (hover: hover) and (pointer: fine) {
           &:hover {
@@ -707,7 +707,6 @@ dialog {
     display: flex;
     justify-content: center;
     align-items: center;
-    user-select: none;
     padding: 0;
     font-family: sans-serif;
 
