@@ -799,8 +799,7 @@ function storeBrushCanvas() {
   canvas.style.display = "none";
 }
 
-function storeFillHistory() {
-  // Remove all redos
+function removeAllRedos() {
   if (fillHistoryIndex > 0) {
     fillPixelGridHistory.splice(0, fillHistoryIndex);
     fillImageDataHistory.splice(0, fillHistoryIndex);
@@ -812,8 +811,22 @@ function storeFillHistory() {
     }
   }
 
+  if (brushHistoryIndex > 0) {
+    brushPixelGridHistory.splice(0, brushHistoryIndex);
+    const canvases = brushCanvasHistory.splice(0, brushHistoryIndex);
+    brushHistoryIndex = 0;
+
+    for (const canvas of canvases) {
+      canvas.remove();
+    }
+  }
+}
+
+function storeFillHistory() {
+  removeAllRedos();
+
   // Store a copy of the 2D array and canvas
-  fillPixelGridHistory.unshift(getFillPixelGrid().map(col => [...col]));
+  fillPixelGridHistory.unshift(structuredClone(getFillPixelGrid()));
   storeFillCanvas();
 
   /* if (fillPixelGridHistory.length > HISTORY_LIMIT) {
@@ -828,19 +841,10 @@ function storeFillHistory() {
 }
 
 function storeBrushHistory() {
-  // Remove all redos
-  if (brushHistoryIndex > 0) {
-    brushPixelGridHistory.splice(0, brushHistoryIndex);
-    const canvases = brushCanvasHistory.splice(0, brushHistoryIndex);
-    brushHistoryIndex = 0;
-
-    for (const canvas of canvases) {
-      canvas.remove();
-    }
-  }
+  removeAllRedos();
 
   // Store a copy of the 2D array and canvas
-  brushPixelGridHistory.unshift(getBrushPixelGrid().map(col => [...col]));
+  brushPixelGridHistory.unshift(structuredClone(getBrushPixelGrid()));
   storeBrushCanvas();
 
   /* if (brushPixelGridHistory.length > HISTORY_LIMIT) {
