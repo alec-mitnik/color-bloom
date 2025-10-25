@@ -24,12 +24,11 @@
 "use strict"
 
 /* TODO:
+ * - Reveal options more gradually and/or show a guided tour
  * - Persist whole history?
  * - Support stored fill settings history/presets?
- * - Persist gallery of past images?
  * - Support rotating the canvas (based on orientation or manual)
  * - Move into own folder and split out scripts
- * - Reveal options more gradually?
  * - Support share/download quality selection, at least full quality vs. default
  * - Better shortcut handling (prevent duplicates, display and store robustly, warn about reserved combos...)
  * - Generate spiral pattern
@@ -40,7 +39,6 @@
  * - Support custom canvas sizes?
  * - Support width varying by speed of strokes or pressure of touch/stylus?
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
- * - New app that hooks into gyroscope to produce a 3D effect, with higher lightness perceived as closer?
  */
 
 let CANVAS_WIDTH = 1920;
@@ -2432,7 +2430,7 @@ function loadShortcutsData() {
       }
     }
   } catch (e) {
-    console.warn("Unable to access local storage:", e);
+    console.warn("Unable to load from local storage:", e);
   }
 }
 
@@ -2495,7 +2493,7 @@ function saveShortcutsData() {
     const changedShortcuts = getCustomizedShortcuts();
     localStorage.setItem('shortcuts', JSON.stringify(changedShortcuts));
   } catch (e) {
-    console.warn(e);
+    console.warn("Unable to save to local storage:", e);
   }
 }
 
