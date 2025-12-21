@@ -1,3 +1,12 @@
+/* Port Lligat Sans */
+@font-face {
+  font-display: swap;
+  font-family: 'Port Lligat Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../fonts/Port_Lligat_Sans/port-lligat-sans-v24-latin-regular.woff2') format('woff2');
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   flex: 0 0 auto;
