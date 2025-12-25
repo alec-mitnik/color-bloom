@@ -3280,7 +3280,7 @@ function init() {
               Canvas Scale
               <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
                   aria-valuetext="50%" oninput="onCanvasScaleValueChange(event.currentTarget.value)" />
-              <span id="canvasScaleValue" aria-hidden="true">50%</span>
+              <output id="canvasScaleValue" aria-hidden="true">50%</output>
             </label>
 
             <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image"
@@ -3333,14 +3333,14 @@ function init() {
             Brush Size
             <input type="range" name="brushSize" min="5" max="100" value="15" step="1"
                 oninput="onRangeValueChange(event, 'brushSizeValue', false)" />
-            <span id="brushSizeValue" aria-hidden="true">15</span>
+            <output id="brushSizeValue" aria-hidden="true">15</output>
           </label>
 
           <label>
             Smoothing
             <input type="range" name="smoothing" min="0" max="1" value="0.25" step="0.05"
                 aria-valuetext="25%" oninput="onRangeValueChange(event, 'smoothingValue')" />
-            <span id="smoothingValue" aria-hidden="true">25%</span>
+            <output id="smoothingValue" aria-hidden="true">25%</output>
           </label>
         </div>
 
@@ -3391,7 +3391,7 @@ function init() {
             Fill Size
             <input id="fill-size" type="range" name="fillSize" min="50" max="500" value="200" step="10"
                 oninput="stopGrowth(); onRangeValueChange(event, 'fillSizeValue', false);" disabled />
-            <span id="fillSizeValue" aria-hidden="true">200</span>
+            <output id="fillSizeValue" aria-hidden="true">200</output>
           </label>
         </div>
 
@@ -3407,21 +3407,21 @@ function init() {
             Hue Variance
             <input type="range" name="hueMutation" min="0" max="1" step="0.01" value="0.5"
                 aria-valuetext="50%" oninput="onRangeValueChange(event, 'hueMutationValue')" />
-            <span id="hueMutationValue" aria-hidden="true">50%</span>
+            <output id="hueMutationValue" aria-hidden="true">50%</output>
           </label>
 
           <label>
             Saturation Variance
             <input type="range" name="saturationMutation" min="0" max="1" step="0.01" value="0.1"
                 aria-valuetext="10%" oninput="onRangeValueChange(event, 'saturationMutationValue')" />
-            <span id="saturationMutationValue" aria-hidden="true">10%</span>
+            <output id="saturationMutationValue" aria-hidden="true">10%</output>
           </label>
 
           <label>
             Lightness Variance
             <input type="range" name="valueMutation" min="0" max="1" step="0.01" value="0.5"
                 aria-valuetext="50%" oninput="onRangeValueChange(event, 'lightnessMutationValue')" />
-            <span id="lightnessMutationValue" aria-hidden="true">50%</span>
+            <output id="lightnessMutationValue" aria-hidden="true">50%</output>
           </label>
         </div>
       </div>
@@ -3438,7 +3438,7 @@ function init() {
             Erase Size
             <input id="erase-size" type="range" name="eraseSize" min="50" max="500" value="200" step="10"
                 oninput="stopGrowth(); onRangeValueChange(event, 'eraseSizeValue', false);" disabled />
-            <span id="eraseSizeValue" aria-hidden="true">200</span>
+            <output id="eraseSizeValue" aria-hidden="true">200</output>
           </label>
         </div>
       </div>
