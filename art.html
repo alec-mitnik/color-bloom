@@ -20,6 +20,8 @@
 "use strict"
 
 /* TODO:
+ *
+ *
  * - Noticeable delay for storing history for dense canvas data especially when dragging
  * - Reveal options more gradually and/or show a guided tour
  * - Persist whole history?
@@ -1969,6 +1971,12 @@ function onCanvasTouchEnd(event) {
 }
 
 function onCanvasMouseEnter(event) {
+  if (touches.size) {
+    // iOS Safari started randomly triggering this when dragging inside the element?
+    // Just disable for when there are touches...
+    return;
+  }
+
   // event.buttons is 1 for the primary button (left click)
   if (!interactive || event.buttons !== 1) {
     finishDrawing();
