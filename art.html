@@ -20,6 +20,7 @@
 "use strict"
 
 /* TODO:
+ * - Noticeable delay for storing history for dense canvas data especially when dragging
  * - Reveal options more gradually and/or show a guided tour
  * - Persist whole history?
  * - Support stored fill settings history/presets?
@@ -40,7 +41,7 @@
 let CANVAS_WIDTH = 1920;
 let CANVAS_HEIGHT = 1200;
 const DELAY_THRESHOLD = 1000;
-let STARTING_SATURATION = 1;
+let STARTING_SATURATION;
 let SATURATION_MUTATION = 0;
 
 // Only applies if using HSL
@@ -295,15 +296,11 @@ window.addEventListener('keydown', (event) => {
   }
 });
 
-function generateStartingHue() {
-  return Math.random() * 360;
-}
-
 function getStartingColor() {
   return rgb2hsl(...hex2rgb(getToolbarData().fillColor));
 }
 
-let STARTING_HUE = generateStartingHue();
+let STARTING_HUE;
 
 function hex2rgb(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -422,8 +419,9 @@ function getToolbarData() {
 
 function step() {
   return new Promise(resolve => {
-    // requestAnimationFrame(resolve);
-    setTimeout(resolve);
+    // Not seeing much difference between these
+    requestAnimationFrame(resolve);
+    // setTimeout(resolve);
   });
 }
 
@@ -448,7 +446,8 @@ function addFillPixel(x, y, h, s, l, startingPixel = undefined) {
     pixelToDraw = {...pixelToDraw, ...blendHslWithAlpha(pixelToDraw, existingPixel)};
   }
 
-  // The pixel grid data needs to reflect the original color so that branches stemming from it won't be diluted.
+  // The pixel grid data needs to reflect the original color
+  // so that branches stemming from it won't be diluted.
   // Allow brushstroke to be distinguished for erase TODO - unnecessary now?
   const pixel = {x, y, h, s, l: Math.max(l, 0.01), a: 1};
   fillPixelGrid[x][y] = pixel;
@@ -462,7 +461,6 @@ function addFillPixel(x, y, h, s, l, startingPixel = undefined) {
     if (blooms.has(startingPixel)) {
       const branches = blooms.get(startingPixel);
       branches.splice(randIndex(branches, true), 0, pixel);
-      blooms.set(startingPixel, branches);
     } else {
       blooms.set(pixel, [pixel]);
     }
@@ -489,11 +487,13 @@ function erasePixel(x, y, erasingOutline, startingPixel = undefined) {
     if (fillPixel) {
       // fillCanvasContext.clearRect(x, y, 1, 1);
 
-      // if (a === 1) {
-      //   fillPixelGrid[x][y] = undefined;
-      // } else {
-        fillPixel.a *= (1 - a);
-        fillPixelGrid[x][y] = fillPixel;
+      // Even if the grid will use undefined,
+      // need to update this for the image data
+      fillPixel.a *= (1 - a);
+
+      if (a === 1) {
+        fillPixelGrid[x][y] = undefined;
+      } // else {
         // drawPixel(fillPixel, fillCanvas);
       // }
 
@@ -516,7 +516,6 @@ function erasePixel(x, y, erasingOutline, startingPixel = undefined) {
     if (blooms.has(startingPixel)) {
       const branches = blooms.get(startingPixel);
       branches.splice(randIndex(branches, true), 0, pixel);
-      blooms.set(startingPixel, branches);
     } else {
       blooms.set(pixel, [pixel]);
     }
@@ -646,7 +645,8 @@ function growBranch(erase = false, erasingOutline = false) {
       }
 
       if (!erase) {
-        if (!(getFillPixelGrid()[neighbor.x][neighbor.y]?.a === 1) && !countsAsOutlineAt(neighbor.x, neighbor.y)) {
+        if (!(getFillPixelGrid()[neighbor.x][neighbor.y]?.a === 1)
+            && !countsAsOutlineAt(neighbor.x, neighbor.y)) {
           addFillPixel(
             neighbor.x,
             neighbor.y,
@@ -698,7 +698,7 @@ function countsAsOutlineAt(x, y) {
   // return neighbors.every(neighbor => !pixelGrid[neighbor.x]?.[neighbor.y] || pixelGrid[neighbor.x]?.[neighbor.y]?.a >= 0.5);
 }
 
-function addStartingPixel(x, y) {
+function addStartingFillPixel(x, y) {
   addFillPixel(x, y, STARTING_HUE, STARTING_SATURATION, STARTING_LIGHTNESS);
 }
 
@@ -708,7 +708,7 @@ async function grow(x, y, erase = false, erasingOutline = false) {
     fillPixelsChanged = false;
 
     if (!erase) {
-      addStartingPixel(x, y);
+      addStartingFillPixel(x, y);
     } else {
       erasePixel(x, y, erasingOutline);
     }
@@ -732,7 +732,11 @@ async function grow(x, y, erase = false, erasingOutline = false) {
 
     stopGrowth();
   } else {
-    addStartingPixel(x, y);
+    if (!erase) {
+      addStartingFillPixel(x, y);
+    } else {
+      erasePixel(x, y, erasingOutline);
+    }
   }
 }
 
@@ -757,11 +761,11 @@ function getBrushPixelGrid() {
 }
 
 function setNewFillPixelGrid() {
-  fillPixelGridHistory[fillHistoryIndex] = Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT}));
+  fillPixelGridHistory[fillHistoryIndex] = constructBlankCanvasSizeGrid();
 }
 
 function setNewBrushPixelGrid() {
-  brushPixelGridHistory[brushHistoryIndex] = Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT}));
+  brushPixelGridHistory[brushHistoryIndex] = constructBlankCanvasSizeGrid();
 }
 
 function storeFillCanvas() {
@@ -816,39 +820,69 @@ function removeAllRedos() {
   }
 }
 
+// Fastest to just loop manually
+function constructBlankCanvasSizeGrid() {
+  const blankArray = new Array(CANVAS_WIDTH);
+
+  for (let i = 0; i < CANVAS_WIDTH; i++) {
+    blankArray[i] = new Array(CANVAS_HEIGHT);
+  }
+
+  return blankArray;
+}
+
+function constructCanvasSizeGridWithValueFunction(valueFunction) {
+  const blankArray = new Array(CANVAS_WIDTH);
+
+  for (let i = 0; i < CANVAS_WIDTH; i++) {
+    blankArray[i] = new Array(CANVAS_HEIGHT);
+
+    for (let j = 0; j < CANVAS_HEIGHT; j++) {
+      blankArray[i][j] = valueFunction(i, j);
+    }
+  }
+
+  return blankArray;
+}
+
+// Manual looping is faster than map which is faster than Array.from
+// which is faster than structuredClone
+function constructFastGridCopy(grid) {
+  // Pre-allocate memory
+  const gridCopy = new Array(grid.length);
+
+  for (let i = 0; i < grid.length; i++) {
+    gridCopy[i] = new Array(grid[i].length);
+
+    for (let j = 0; j < grid[i].length; j++) {
+      const pixel = grid[i][j];
+      gridCopy[i][j] = pixel ? {...pixel} : undefined;
+    }
+  }
+
+  return gridCopy;
+}
+
 function storeFillHistory() {
   removeAllRedos();
 
+  // Using structuredClone takes too long, but this still has a noticeable delay
+  // When many cells have pixel data...
+  const fillPixelGridCopy = constructFastGridCopy(getFillPixelGrid());
+
   // Store a copy of the 2D array and canvas
-  fillPixelGridHistory.unshift(structuredClone(getFillPixelGrid()));
+  fillPixelGridHistory.unshift(fillPixelGridCopy);
   storeFillCanvas();
-
-  /* if (fillPixelGridHistory.length > HISTORY_LIMIT) {
-    fillPixelGridHistory.pop();
-    fillImageDataHistory.pop();
-  }
-
-  if (fillCanvasHistory.length > HISTORY_LIMIT) {
-    const canvas = fillCanvasHistory.pop();
-    canvas.remove();
-  } */
 }
 
 function storeBrushHistory() {
   removeAllRedos();
 
+  const brushPixelGridCopy = constructFastGridCopy(getBrushPixelGrid());
+
   // Store a copy of the 2D array and canvas
-  brushPixelGridHistory.unshift(structuredClone(getBrushPixelGrid()));
+  brushPixelGridHistory.unshift(brushPixelGridCopy);
   storeBrushCanvas();
-
-  /* if (brushPixelGridHistory.length > HISTORY_LIMIT) {
-    brushPixelGridHistory.pop();
-  }
-
-  if (brushCanvasHistory.length > HISTORY_LIMIT) {
-    const canvas = brushCanvasHistory.pop();
-    canvas.remove();
-  } */
 }
 
 function storeCombinedHistory(historyType) {
@@ -1142,8 +1176,8 @@ async function syncPixelGridToBrushCanvas() {
   const previousPixelGrid = brushPixelGridHistory[brushHistoryIndex + 1];
   const {data} = context.getImageData(0, 0, canvas.width, canvas.height);
 
-  brushPixelGridHistory[brushHistoryIndex] = Array.from({length: CANVAS_WIDTH},
-      (_elX, x) => Array.from({length: CANVAS_HEIGHT}, (_elY, y) => {
+  brushPixelGridHistory[brushHistoryIndex] =
+      constructCanvasSizeGridWithValueFunction((x, y) => {
     const index = (y * CANVAS_WIDTH + x) * 4;
     // TODO - support other colors?
     // const r = data[index];
@@ -1168,7 +1202,7 @@ async function syncPixelGridToBrushCanvas() {
     }
 
     return pixel;
-  }));
+  });
 }
 
 function resetCanvas() {
@@ -3030,8 +3064,9 @@ function init() {
   fillCanvas.height = CANVAS_HEIGHT;
   canvasWrapper.appendChild(fillCanvas);
 
-  fillPixelGridHistory.unshift(Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT})));
-  fillImageDataHistory.unshift(fillCanvas.getContext("2d", {willReadFrequently: true}).getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT));
+  fillPixelGridHistory.unshift(constructBlankCanvasSizeGrid());
+  fillImageDataHistory.unshift(fillCanvas.getContext("2d", {willReadFrequently: true})
+      .getImageData(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT));
   fillCanvasHistory.unshift(fillCanvas);
 
   const brushCanvas = document.createElement("canvas");
@@ -3040,7 +3075,7 @@ function init() {
   brushCanvas.height = CANVAS_HEIGHT;
   canvasWrapper.appendChild(brushCanvas);
 
-  brushPixelGridHistory.unshift(Array.from({length: CANVAS_WIDTH}, () => Array.from({length: CANVAS_HEIGHT})));
+  brushPixelGridHistory.unshift(constructBlankCanvasSizeGrid());
   brushCanvasHistory.unshift(brushCanvas);
 
   combinedHistory.unshift("");
@@ -3071,7 +3106,8 @@ function init() {
       const element = event.currentTarget;
       const iconWrapper = element.querySelector('& > span');
 
-      openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML, element.title, element.dataset.description, element.dataset.identifier);
+      openOptionInfoDialog(iconWrapper.innerText || iconWrapper.innerHTML,
+          element.title, element.dataset.description, element.dataset.identifier);
     });
 
     // iOS Safari doesn't support contextmenu events, so need to implement long-press manually
