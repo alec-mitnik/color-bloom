@@ -3255,10 +3255,12 @@ function init() {
             <fieldset inert role="presentation" aria-hidden="true" class="glossary">
               <legend>Glossary</legend>
               <dl>
-                <dt><kbd class="meta-key"></kbd></dt> - <dd>Windows key or Command key</dd><br />
-                <dt><kbd class="alt-key"></kbd></dt> - <dd>Alt key or Option key</dd><br />
-                <dt><kbd class="control-key"></kbd></dt> - <dd>Control key</dd><br />
-                <dt><kbd class="shift-key"></kbd></dt> - <dd>Shift key</dd>
+                <!-- A dl can only have direct children of div, dt, or dd,
+                and not even br or raw text is valid -->
+                <div><dt><kbd class="meta-key"></kbd></dt> - <dd>Windows key or Command key</dd></div>
+                <div><dt><kbd class="alt-key"></kbd></dt> - <dd>Alt key or Option key</dd></div>
+                <div><dt><kbd class="control-key"></kbd></dt> - <dd>Control key</dd></div>
+                <div><dt><kbd class="shift-key"></kbd></dt> - <dd>Shift key</dd></div>
               </dl>
             </fieldset>
 
