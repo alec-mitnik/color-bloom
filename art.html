@@ -25,17 +25,18 @@
  * - Noticeable delay for storing history for dense canvas data especially when dragging
  * - Reveal options more gradually and/or show a guided tour
  * - Persist whole history?
- * - Support stored fill settings history/presets?
- * - Support rotating the canvas (based on orientation or manual)
+ * - Support storing fill settings history/presets?
+ * - Support rotating/flipping the canvas
  * - Move into own folder and split out scripts
- * - Support share/download quality selection, at least full quality vs. default
+ * - Settings Dialog options:
+ *     - Support share/download quality selection, at least full quality vs. default
+ *     - Support custom canvas sizes
  * - Better shortcut handling (prevent duplicates, display and store robustly, warn about reserved combos...)
  * - Generate spiral pattern
  * - More template images
  * - Support uploading own images as templates, or maybe as translucent overlays to trace?
  * - Support color selection for brush?
  * - Support moving canvas contents around?
- * - Support custom canvas sizes?
  * - Support width varying by speed of strokes or pressure of touch/stylus?
  * - Consider using pointer events instead of separate mouse and touch events?  Not worth it except for getting pressure values.
  */
@@ -3253,10 +3254,12 @@ function init() {
 
             <fieldset inert role="presentation" aria-hidden="true" class="glossary">
               <legend>Glossary</legend>
-              <dt><kbd class="meta-key"></kbd></dt> - <dd>Windows key or Command key</dd><br />
-              <dt><kbd class="alt-key"></kbd></dt> - <dd>Alt key or Option key</dd><br />
-              <dt><kbd class="control-key"></kbd></dt> - <dd>Control key</dd><br />
-              <dt><kbd class="shift-key"></kbd></dt> - <dd>Shift key</dd>
+              <dl>
+                <dt><kbd class="meta-key"></kbd></dt> - <dd>Windows key or Command key</dd><br />
+                <dt><kbd class="alt-key"></kbd></dt> - <dd>Alt key or Option key</dd><br />
+                <dt><kbd class="control-key"></kbd></dt> - <dd>Control key</dd><br />
+                <dt><kbd class="shift-key"></kbd></dt> - <dd>Shift key</dd>
+              </dl>
             </fieldset>
 
             <table id="shortcuts-table" class="relative">
@@ -3287,19 +3290,20 @@ function init() {
 
         <div class="menu">
           <div role="radiogroup" aria-label="Tools">
-            <label aria-label="Brush" title="Brush" data-identifier="brush"
+            <!-- aria-label is not valid on label elements -->
+            <label title="Brush" data-identifier="brush"
                 data-description="Select this tool to draw black outlines.  Fill and erasure blooms stop at outlines.  Erasing outlines themselves leaves the corresponding fill area blank but leaves the surrounding area untouched.  You can then fill the erased outline area as a way to effectively get colored outlines.">
               <span aria-hidden="true">🖌️</span>
               <input type="radio" name="tool" value="brush" aria-label="Brush" checked />
             </label>
 
-            <label aria-label="Fill" title="Fill" data-identifier="fill"
+            <label title="Fill" data-identifier="fill"
                 data-description="Select this tool to slowly fill a blank area with a configurable bloom of color, stopping at outlines.  Works with a single click/tap or by dragging.  Set all variances to 0 for a traditional solid fill.  Click/tap a filled area or the background outside the canvas to stop any fill blooms prematurely.">
               <span aria-hidden="true">🎆</span>
               <input type="radio" name="tool" value="fill" aria-label="Fill" />
             </label>
 
-            <label aria-label="Erase" title="Erase" data-identifier="erase"
+            <label title="Erase" data-identifier="erase"
                 data-description="Select this tool to slowly erase filled areas or outlines, whichever is targeted first.  Works with a single click/tap or by dragging.  Click/tap a blank area or the background outside the canvas to stop any erasure blooms prematurely.">
               <span aria-hidden="true">🧼</span>
               <input type="radio" name="tool" value="erase" aria-label="Erase" />
@@ -3307,7 +3311,7 @@ function init() {
           </div>
 
           <div class="collapsible">
-            <label id="show-guidelines" aria-label="Show Guidelines" title="Show Guidelines"
+            <label id="show-guidelines" title="Show Guidelines"
                 data-identifier="show_guidelines"
                 data-description="When toggled on, shows lines to help target the canvas center.">
               <span aria-hidden="true">📏</span>
@@ -3324,7 +3328,8 @@ function init() {
               Canvas Scale
               <input type="range" id="canvasScale" name="canvasScale" min="25" max="200" value="50" step="5"
                   aria-valuetext="50%" oninput="onCanvasScaleValueChange(event.currentTarget.value)" />
-              <output id="canvasScaleValue" aria-hidden="true">50%</output>
+              <!-- An output element is treated as an erroneous extra label target, so just use span -->
+              <span id="canvasScaleValue" aria-hidden="true">50%</span>
             </label>
 
             <button id="shareButton" type="button" aria-label="Share Canvas Image" title="Share Canvas Image"
@@ -3360,7 +3365,7 @@ function init() {
           </div>
         </div>
 
-        <label id="toggle-collapse" aria-label="Toggle Toolbar Collapse" title="Toggle Toolbar Collapse"
+        <label id="toggle-collapse" title="Toggle Toolbar Collapse"
             data-identifier="toggle_toolbar_collapse"
             data-description="Toggles between a collapsed, minimalist toolbar and the full toolbar.">
           <span aria-hidden="true">
@@ -3377,14 +3382,14 @@ function init() {
             Brush Size
             <input type="range" name="brushSize" min="5" max="100" value="15" step="1"
                 oninput="onRangeValueChange(event, 'brushSizeValue', false)" />
-            <output id="brushSizeValue" aria-hidden="true">15</output>
+            <span id="brushSizeValue" aria-hidden="true">15</span>
           </label>
 
           <label>
             Smoothing
             <input type="range" name="smoothing" min="0" max="1" value="0.25" step="0.05"
                 aria-valuetext="25%" oninput="onRangeValueChange(event, 'smoothingValue')" />
-            <output id="smoothingValue" aria-hidden="true">25%</output>
+            <span id="smoothingValue" aria-hidden="true">25%</span>
           </label>
         </div>
 
@@ -3425,7 +3430,7 @@ function init() {
 
       <div class="fill-menu submenu collapsible" role="group" aria-label="Fill Submenu">
         <div>
-          <label id="limitless-fill" aria-label="Limitless Fill" title="Limitless Fill"
+          <label id="limitless-fill" title="Limitless Fill"
               data-description="Toggle this off to restrict each fill bloom to a configured size and also allow for some targeting leeway to easily fill in stray blank spots.">
             <span aria-hidden="true">♾️</span>
             <input type="checkbox" name="limitlessFill" aria-label="Limitless Fill" checked onchange="stopGrowth(); document.getElementById('fill-size').disabled = event.currentTarget.checked;" />
@@ -3435,11 +3440,11 @@ function init() {
             Fill Size
             <input id="fill-size" type="range" name="fillSize" min="50" max="500" value="200" step="10"
                 oninput="stopGrowth(); onRangeValueChange(event, 'fillSizeValue', false);" disabled />
-            <output id="fillSizeValue" aria-hidden="true">200</output>
+            <span id="fillSizeValue" aria-hidden="true">200</span>
           </label>
         </div>
 
-        <label aria-label="Color for Fill" title="Color for Fill" data-identifier="fill_color"
+        <label title="Color for Fill" data-identifier="fill_color"
             data-description="Selects the starting color for fill blooms.">
           <span aria-hidden="true" style="visibility: hidden;">🎨</span>
           <input type="color" name="fillColor" oninput="onFillColorChange(event)"
@@ -3451,28 +3456,28 @@ function init() {
             Hue Variance
             <input type="range" name="hueMutation" min="0" max="1" step="0.01" value="0.5"
                 aria-valuetext="50%" oninput="onRangeValueChange(event, 'hueMutationValue')" />
-            <output id="hueMutationValue" aria-hidden="true">50%</output>
+            <span id="hueMutationValue" aria-hidden="true">50%</span>
           </label>
 
           <label>
             Saturation Variance
             <input type="range" name="saturationMutation" min="0" max="1" step="0.01" value="0.1"
                 aria-valuetext="10%" oninput="onRangeValueChange(event, 'saturationMutationValue')" />
-            <output id="saturationMutationValue" aria-hidden="true">10%</output>
+            <span id="saturationMutationValue" aria-hidden="true">10%</span>
           </label>
 
           <label>
             Lightness Variance
             <input type="range" name="valueMutation" min="0" max="1" step="0.01" value="0.5"
                 aria-valuetext="50%" oninput="onRangeValueChange(event, 'lightnessMutationValue')" />
-            <output id="lightnessMutationValue" aria-hidden="true">50%</output>
+            <span id="lightnessMutationValue" aria-hidden="true">50%</span>
           </label>
         </div>
       </div>
 
       <div class="erase-menu submenu collapsible" role="group" aria-label="Erase Submenu">
         <div>
-          <label id="limitless-erase" aria-label="Limitless Erase" title="Limitless Erase"
+          <label id="limitless-erase" title="Limitless Erase"
               data-description="Toggle this off to restrict each erasure bloom to a configured size and also allow for some targeting leeway to easily erase stray filled spots.">
             <span aria-hidden="true">♾️</span>
             <input type="checkbox" name="limitlessErase" aria-label="Limitless Erase" checked onchange="stopGrowth(); document.getElementById('erase-size').disabled = event.currentTarget.checked;" />
@@ -3482,7 +3487,7 @@ function init() {
             Erase Size
             <input id="erase-size" type="range" name="eraseSize" min="50" max="500" value="200" step="10"
                 oninput="stopGrowth(); onRangeValueChange(event, 'eraseSizeValue', false);" disabled />
-            <output id="eraseSizeValue" aria-hidden="true">200</output>
+            <span id="eraseSizeValue" aria-hidden="true">200</span>
           </label>
         </div>
       </div>
@@ -3506,7 +3511,7 @@ function init() {
       <div class="guide vertical cursor"></div>
       <div class="guide horizontal cursor"></div>
 
-      <div id="canvasWrapper" tabindex="0" aria-label="Canvas"></div>
+      <section id="canvasWrapper" tabindex="0" aria-label="Canvas"></section>
     </div>
 
     <!-- Settings Button -->

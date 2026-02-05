@@ -547,6 +547,10 @@ dialog {
         gap: 0.25rem;
 
         &#shortcuts-settings {
+          dl {
+            margin: 0;
+          }
+
           &.editing-shortcuts {
             #edit-shortcuts-button {
               display: none;
